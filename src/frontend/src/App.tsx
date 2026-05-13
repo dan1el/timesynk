@@ -19,7 +19,7 @@ export default function App() {
             Innstillinger
           </NavLink>
         </header>
-        <main style={{ padding: "24px", maxWidth: 900, margin: "0 auto" }}>
+        <main style={{ padding: "24px", maxWidth: 1000, margin: "0 auto" }}>
           <Routes>
             <Route path="/" element={<TimeEntries />} />
             <Route path="/settings" element={<Settings />} />

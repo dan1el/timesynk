@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfMonth, parseISO } from "date-fns";
+import { format, startOfMonth, startOfWeek, endOfWeek, addWeeks, subWeeks, addMonths, subMonths, eachDayOfInterval, endOfMonth, parseISO } from "date-fns";
 import { nb } from "date-fns/locale";
+import { MonthView } from "./MonthView";
 
 interface Project { id: string; displayName: string; }
 interface TimeEntry {
@@ -31,7 +32,9 @@ type CellKey = string; // `${date}::${projectId}`
 interface CellState { id?: string; hours: string; syncedAt?: string; dirty: boolean; }
 
 export function TimeEntries() {
+  const [view, setView] = useState<"week" | "month">("week");
   const [week, setWeek] = useState(() => startOfWeek(new Date(), WEEK_OPTS));
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const weekPickerRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
@@ -168,37 +171,55 @@ export function TimeEntries() {
     <div>
       {/* Top bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={() => setWeek(subWeeks(week, 1))} style={btnStyle}>‹</button>
-          <span
-            onClick={() => (weekPickerRef.current as any)?.showPicker?.()}
-            style={{ fontWeight: 600, fontSize: 16, minWidth: 200, textAlign: "center", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }}
-            title="Klikk for å velge uke"
-          >
-            Uke {format(week, "w")} – {format(week, "d. MMM", { locale: nb })} – {format(endOfWeek(week, WEEK_OPTS), "d. MMM yyyy", { locale: nb })}
-          </span>
-          <input
-            ref={weekPickerRef}
-            type="week"
-            value={format(week, "yyyy-'W'ww", { useAdditionalWeekYearTokens: true })}
-            onChange={e => {
-              if (!e.target.value) return;
-              const [y, w2] = e.target.value.split("-W").map(Number) as [number, number];
-              const jan4 = new Date(y, 0, 4);
-              const startOfYear = startOfWeek(jan4, WEEK_OPTS);
-              setWeek(new Date(startOfYear.getTime() + (w2 - 1) * 7 * 24 * 60 * 60 * 1000));
-            }}
-            style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
-          />
-          <button onClick={() => setWeek(addWeeks(week, 1))} style={btnStyle}>›</button>
-          <button onClick={() => setWeek(startOfWeek(new Date(), WEEK_OPTS))} style={{ ...btnStyle, fontSize: 12, color: "#6b7280" }}>I dag</button>
+        {/* Left: view toggle */}
+        <div style={{ display: "flex", borderRadius: 6, border: "1px solid #d1d5db", overflow: "hidden" }}>
+          <button onClick={() => setView("week")} style={{ ...btnStyle, border: "none", borderRadius: 0, background: view === "week" ? "#2563eb" : "#fff", color: view === "week" ? "#fff" : "#374151" }}>Uke</button>
+          <button onClick={() => setView("month")} style={{ ...btnStyle, border: "none", borderRadius: 0, borderLeft: "1px solid #d1d5db", background: view === "month" ? "#2563eb" : "#fff", color: view === "month" ? "#fff" : "#374151" }}>Måned</button>
         </div>
+
+        {/* Center: navigation */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}>
+          {view === "week" ? <>
+            <button onClick={() => setWeek(subWeeks(week, 1))} style={btnStyle}>‹</button>
+            <span
+              onClick={() => (weekPickerRef.current as any)?.showPicker?.()}
+              style={{ fontWeight: 600, fontSize: 16, minWidth: 220, textAlign: "center", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3, whiteSpace: "nowrap" }}
+              title="Klikk for å velge uke"
+            >
+              Uke {format(week, "w")} – {format(week, "d. MMM", { locale: nb })} – {format(endOfWeek(week, WEEK_OPTS), "d. MMM yyyy", { locale: nb })}
+            </span>
+            <input
+              ref={weekPickerRef}
+              type="week"
+              value={format(week, "yyyy-'W'ww", { useAdditionalWeekYearTokens: true })}
+              onChange={e => {
+                if (!e.target.value) return;
+                const [y, w2] = e.target.value.split("-W").map(Number) as [number, number];
+                const jan4 = new Date(y, 0, 4);
+                const startOfYear = startOfWeek(jan4, WEEK_OPTS);
+                setWeek(new Date(startOfYear.getTime() + (w2 - 1) * 7 * 24 * 60 * 60 * 1000));
+              }}
+              style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+            />
+            <button onClick={() => setWeek(addWeeks(week, 1))} style={btnStyle}>›</button>
+            <button onClick={() => setWeek(startOfWeek(new Date(), WEEK_OPTS))} style={{ ...btnStyle, fontSize: 12, color: "#6b7280" }}>I dag</button>
+          </> : <>
+            <button onClick={() => setMonth(subMonths(month, 1))} style={btnStyle}>‹</button>
+            <span style={{ fontWeight: 600, fontSize: 16, minWidth: 160, textAlign: "center", whiteSpace: "nowrap" }}>
+              {format(month, "MMMM yyyy", { locale: nb })}
+            </span>
+            <button onClick={() => setMonth(addMonths(month, 1))} style={btnStyle}>›</button>
+            <button onClick={() => setMonth(startOfMonth(new Date()))} style={{ ...btnStyle, fontSize: 12, color: "#6b7280" }}>I dag</button>
+          </>}
+        </div>
+
+        {/* Right: sync buttons */}
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => pullMutation.mutate()} disabled={pullMutation.isPending} style={{ ...btnStyle, background: "#7c3aed", color: "#fff" }}>
+          <button onClick={() => pullMutation.mutate()} disabled={pullMutation.isPending} style={{ ...btnStyle, background: "#7c3aed", color: "#fff", whiteSpace: "nowrap" }}>
             {pullMutation.isPending ? "Henter…" : "⬇ Pull fra Tripletex"}
           </button>
-          <button onClick={openPushPreview} disabled={syncMutation.isPending} style={{ ...btnStyle, background: "#059669", color: "#fff" }}>
-            {syncMutation.isPending ? "Syncing…" : "⇅ Push til Jira + Tripletex"}
+          <button onClick={openPushPreview} disabled={syncMutation.isPending} style={{ ...btnStyle, background: "#059669", color: "#fff", whiteSpace: "nowrap" }}>
+            {syncMutation.isPending ? "Syncing…" : "⇅ Push til Jira og Tripletex"}
           </button>
         </div>
       </div>
@@ -253,7 +274,7 @@ export function TimeEntries() {
       )}
 
       {/* Setup warning */}
-      {!loadingProjects && !hasProjects && (
+      {view === "week" && !loadingProjects && !hasProjects && (
         <div style={{ padding: "16px 20px", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontWeight: 600, color: "#92400e" }}>⚙️ Ingen prosjekter konfigurert</div>
@@ -265,8 +286,13 @@ export function TimeEntries() {
         </div>
       )}
 
+      {/* Monthly view */}
+      {view === "month" && (
+        <MonthView month={month} setMonth={setMonth} onWeekClick={(weekStart) => { setWeek(weekStart); setView("week"); }} />
+      )}
+
       {/* Weekly grid */}
-      {hasProjects && (
+      {view === "week" && hasProjects && (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, tableLayout: "fixed" }}>
           <thead>
             <tr>
@@ -307,7 +333,7 @@ export function TimeEntries() {
                             min="0"
                             max="24"
                             step="0.5"
-                            placeholder="–"
+                            placeholder=""
                             value={cell.hours}
                             onChange={(e) => updateCell(dateStr, project.id, { hours: e.target.value })}
                             onBlur={() => saveCell(dateStr, project.id)}
@@ -452,7 +478,7 @@ function actionBadge(action: "create" | "update"): React.CSSProperties {
   };
 }
 
-const btnStyle: React.CSSProperties = { padding: "6px 14px", border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", fontSize: 14, cursor: "pointer" };
+const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
 const bannerStyle = (bg: string): React.CSSProperties => ({ padding: "8px 12px", background: bg, borderRadius: 6, marginBottom: 12, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between" });
 function thStyle(align: "left" | "center"): React.CSSProperties {
   return { padding: "10px 12px", textAlign: align, background: "#f9fafb", borderBottom: "2px solid #e5e7eb", fontWeight: 600, color: "#374151" };
