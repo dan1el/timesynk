@@ -172,9 +172,9 @@ export function TimeEntries() {
       {/* Top bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         {/* Left: view toggle */}
-        <div style={{ display: "flex", borderRadius: 6, border: "1px solid #d1d5db", overflow: "hidden" }}>
-          <button onClick={() => setView("week")} style={{ ...btnStyle, border: "none", borderRadius: 0, background: view === "week" ? "#2563eb" : "#fff", color: view === "week" ? "#fff" : "#374151" }}>Uke</button>
-          <button onClick={() => setView("month")} style={{ ...btnStyle, border: "none", borderRadius: 0, borderLeft: "1px solid #d1d5db", background: view === "month" ? "#2563eb" : "#fff", color: view === "month" ? "#fff" : "#374151" }}>Måned</button>
+        <div style={{ display: "flex", borderRadius: 6, border: "1px solid var(--btn-border)", overflow: "hidden" }}>
+          <button onClick={() => setView("week")} style={{ ...btnStyle, border: "none", borderRadius: 0, background: view === "week" ? "var(--accent)" : "var(--btn-bg)", color: view === "week" ? "var(--nav-text)" : "var(--text-secondary)" }}>Uke</button>
+          <button onClick={() => setView("month")} style={{ ...btnStyle, border: "none", borderRadius: 0, borderLeft: "1px solid var(--btn-border)", background: view === "month" ? "var(--accent)" : "var(--btn-bg)", color: view === "month" ? "var(--nav-text)" : "var(--text-secondary)" }}>Måned</button>
         </div>
 
         {/* Center: navigation */}
@@ -202,14 +202,14 @@ export function TimeEntries() {
               style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
             />
             <button onClick={() => setWeek(addWeeks(week, 1))} style={btnStyle}>›</button>
-            <button onClick={() => setWeek(startOfWeek(new Date(), WEEK_OPTS))} style={{ ...btnStyle, fontSize: 12, color: "#6b7280" }}>I dag</button>
+            <button onClick={() => setWeek(startOfWeek(new Date(), WEEK_OPTS))} style={{ ...btnStyle, fontSize: 12, color: "var(--text-muted)" }}>I dag</button>
           </> : <>
             <button onClick={() => setMonth(subMonths(month, 1))} style={btnStyle}>‹</button>
             <span style={{ fontWeight: 600, fontSize: 16, minWidth: 160, textAlign: "center", whiteSpace: "nowrap" }}>
               {format(month, "MMMM yyyy", { locale: nb })}
             </span>
             <button onClick={() => setMonth(addMonths(month, 1))} style={btnStyle}>›</button>
-            <button onClick={() => setMonth(startOfMonth(new Date()))} style={{ ...btnStyle, fontSize: 12, color: "#6b7280" }}>I dag</button>
+            <button onClick={() => setMonth(startOfMonth(new Date()))} style={{ ...btnStyle, fontSize: 12, color: "var(--text-muted)" }}>I dag</button>
           </>}
         </div>
 
@@ -245,23 +245,23 @@ export function TimeEntries() {
       {/* Push results modal */}
       {pushResults && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 520, maxWidth: "95vw", maxHeight: "75vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflowX: "hidden" }}>
+          <div style={{ background: "var(--surface)", borderRadius: 12, padding: 28, width: 520, maxWidth: "95vw", maxHeight: "75vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflowX: "hidden" }}>
             <h2 style={{ margin: "0 0 16px", fontSize: 18, flexShrink: 0 }}>Push-resultat</h2>
             <div style={{ overflowY: "auto", overflowX: "hidden", flex: 1, marginBottom: 16 }}>
               {pushResults.length === 0
-                ? <p style={{ color: "#6b7280" }}>Ingenting å synkronisere.</p>
+                ? <p style={{ color: "var(--text-muted)" }}>Ingenting å synkronisere.</p>
                 : pushResults.map((r) => (
-                  <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 14, display: "flex", gap: 12, alignItems: "center" }}>
-                    <span style={{ color: "#6b7280", whiteSpace: "nowrap", minWidth: 110 }}>
+                  <div key={r.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)", fontSize: 14, display: "flex", gap: 12, alignItems: "center" }}>
+                    <span style={{ color: "var(--text-muted)", whiteSpace: "nowrap", minWidth: 110 }}>
                       {format(new Date(r.date + "T12:00:00"), "EEE d. MMM", { locale: nb })}
                     </span>
                     <span style={{ fontWeight: 600, minWidth: 36 }}>{r.hours}t</span>
                     {r.error
-                      ? <span style={{ color: "#dc2626" }}>❌ {r.error}</span>
+                      ? <span style={{ color: "var(--red)" }}>❌ {r.error}</span>
                       : <>
                           {r.tripletex && <span style={{ color: "#059669" }}>✓ Tripletex</span>}
-                          {r.jira && <span style={{ color: "#2563eb" }}>✓ Jira</span>}
-                          {!r.tripletex && !r.jira && !r.error && <span style={{ color: "#6b7280" }}>Ingen endringer</span>}
+                          {r.jira && <span style={{ color: "var(--accent)" }}>✓ Jira</span>}
+                          {!r.tripletex && !r.jira && !r.error && <span style={{ color: "var(--text-muted)" }}>Ingen endringer</span>}
                         </>
                     }
                   </div>
@@ -298,11 +298,11 @@ export function TimeEntries() {
             <tr>
               <th style={thStyle("left")}>Prosjekt</th>
               {days.map((d) => (
-                <th key={d.toISOString()} style={{ ...thStyle("center"), background: isToday(d) ? "#eff6ff" : isRedDay(d) ? "#fff5f5" : "#f9fafb" }}>
-                  <div style={{ fontWeight: 600, color: isToday(d) ? "#2563eb" : isRedDay(d) ? "#dc2626" : "#374151" }}>
+                <th key={d.toISOString()} style={{ ...thStyle("center"), background: isToday(d) ? "var(--bg-blue-tint)" : isRedDay(d) ? "var(--bg-red-tint)" : "var(--bg-subtle)" }}>
+                  <div style={{ fontWeight: 600, color: isToday(d) ? "var(--accent)" : isRedDay(d) ? "var(--red)" : "var(--text-secondary)" }}>
                     {format(d, "EEE", { locale: nb })}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 400, color: isRedDay(d) ? "#dc2626" : "#6b7280" }}>
+                  <div style={{ fontSize: 12, fontWeight: 400, color: isRedDay(d) ? "var(--red)" : "var(--text-muted)" }}>
                     {format(d, "d. MMM", { locale: nb })}
                   </div>
                 </th>
@@ -317,8 +317,8 @@ export function TimeEntries() {
                 return sum + (isNaN(h) ? 0 : h);
               }, 0);
               return (
-                <tr key={project.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={{ padding: "6px 12px", fontWeight: 500, color: "#1f2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={project.displayName}>
+                <tr key={project.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                  <td style={{ padding: "6px 12px", fontWeight: 500, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={project.displayName}>
                     {project.displayName}
                   </td>
                   {days.map((d) => {
@@ -326,7 +326,7 @@ export function TimeEntries() {
                     const cell = getCell(dateStr, project.id);
                     const synced = cell.syncedAt && !cell.dirty;
                     return (
-                      <td key={d.toISOString()} style={{ padding: "4px 4px", textAlign: "center", background: isToday(d) ? "#eff6ff" : isRedDay(d) ? "#fff5f5" : "transparent" }}>
+                      <td key={d.toISOString()} style={{ padding: "4px 4px", textAlign: "center", background: isToday(d) ? "var(--bg-blue-tint)" : isRedDay(d) ? "var(--bg-red-tint)" : "transparent" }}>
                         <div style={{ position: "relative", display: "inline-block" }}>
                           <input
                             type="number"
@@ -341,23 +341,23 @@ export function TimeEntries() {
                               width: "100%",
                               textAlign: "center",
                               padding: "7px 4px",
-                              border: `1px solid ${cell.dirty ? "#f59e0b" : synced ? "#86efac" : "#d1d5db"}`,
+                              border: `1px solid ${cell.dirty ? "#f59e0b" : synced ? "#86efac" : "var(--input-border)"}`,
                               borderRadius: 6,
                               fontSize: 14,
-                              background: synced ? "#f0fdf4" : "#fff",
+                              background: synced ? "#f0fdf4" : "var(--input-bg)",
                               outline: "none",
-                              color: "#111827",
+                              color: "var(--text-primary)",
                               boxSizing: "border-box",
                             }}
                           />
                           {synced && (
-                            <span style={{ position: "absolute", top: -4, right: -4, fontSize: 9, color: "#16a34a" }}>✓</span>
+                            <span style={{ position: "absolute", top: -4, right: -4, fontSize: 9, color: "var(--green)" }}>✓</span>
                           )}
                         </div>
                       </td>
                     );
                   })}
-                  <td style={{ padding: "6px 12px", textAlign: "center", fontWeight: 600, color: rowTotal > 0 ? "#111827" : "#d1d5db" }}>
+                  <td style={{ padding: "6px 12px", textAlign: "center", fontWeight: 600, color: rowTotal > 0 ? "var(--text-primary)" : "var(--text-disabled)" }}>
                     {rowTotal > 0 ? rowTotal : "–"}
                   </td>
                 </tr>
@@ -365,12 +365,12 @@ export function TimeEntries() {
             })}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: "2px solid #e5e7eb", background: "#f9fafb" }}>
-              <td style={{ padding: "8px 12px", fontWeight: 600, color: "#374151" }}>Sum</td>
+            <tr style={{ borderTop: "2px solid var(--border)", background: "var(--bg-subtle)" }}>
+              <td style={{ padding: "8px 12px", fontWeight: 600, color: "var(--text-secondary)" }}>Sum</td>
               {days.map((d) => {
                 const total = dayTotal(format(d, "yyyy-MM-dd"));
                 return (
-                  <td key={d.toISOString()} style={{ textAlign: "center", padding: "8px 4px", fontWeight: 600, color: total > 0 ? "#111827" : "#d1d5db", background: isToday(d) ? "#eff6ff" : isRedDay(d) ? "#fff5f5" : "transparent" }}>
+                  <td key={d.toISOString()} style={{ textAlign: "center", padding: "8px 4px", fontWeight: 600, color: total > 0 ? "var(--text-primary)" : "var(--text-disabled)", background: isToday(d) ? "var(--bg-blue-tint)" : isRedDay(d) ? "var(--bg-red-tint)" : "transparent" }}>
                     {total > 0 ? total : "–"}
                   </td>
                 );
@@ -385,12 +385,12 @@ export function TimeEntries() {
 
       {showPushPreview && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 560, maxWidth: "95vw", maxHeight: "75vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflowX: "hidden" }}>
+          <div style={{ background: "var(--surface)", borderRadius: 12, padding: 28, width: 560, maxWidth: "95vw", maxHeight: "75vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflowX: "hidden" }}>
             <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Bekreft push</h2>
             {previewLoading ? (
-              <p style={{ color: "#6b7280", flex: 1 }}>Henter endringer…</p>
+              <p style={{ color: "var(--text-muted)", flex: 1 }}>Henter endringer…</p>
             ) : previewUpserts.length === 0 && previewDeletes.length === 0 ? (
-              <p style={{ color: "#6b7280", flex: 1 }}>Ingen endringer å synkronisere.</p>
+              <p style={{ color: "var(--text-muted)", flex: 1 }}>Ingen endringer å synkronisere.</p>
             ) : (
               <div style={{ overflowY: "auto", flex: 1, marginBottom: 16 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -404,10 +404,10 @@ export function TimeEntries() {
                         groups.get(key)!.connectors.push(item.connector === "jira" ? "Jira" : "Tripletex");
                       }
                       return <>
-                        <tr><td colSpan={4} style={{ padding: "8px 8px 4px", fontSize: 12, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Legger til</td></tr>
+                        <tr><td colSpan={4} style={{ padding: "8px 8px 4px", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Legger til</td></tr>
                         {[...groups.values()].map(({ item, connectors }, i) => (
-                          <tr key={`u${i}`} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ padding: "6px 8px", whiteSpace: "nowrap", color: "#6b7280" }}>
+                          <tr key={`u${i}`} style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td style={{ padding: "6px 8px", whiteSpace: "nowrap", color: "var(--text-muted)" }}>
                               {format(new Date(item.date + "T12:00:00"), "EEE d. MMM", { locale: nb })}
                             </td>
                             <td style={{ padding: "6px 8px", fontWeight: 600 }}>{item.hours}t</td>
@@ -428,14 +428,14 @@ export function TimeEntries() {
                         groups.get(key)!.connectors.push(item.connector === "jira" ? "Jira" : "Tripletex");
                       }
                       return <>
-                        <tr><td colSpan={4} style={{ padding: "12px 8px 4px", fontSize: 12, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Sletter</td></tr>
+                        <tr><td colSpan={4} style={{ padding: "12px 8px 4px", fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Sletter</td></tr>
                         {[...groups.values()].map(({ item, connectors }, i) => (
-                          <tr key={`d${i}`} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ padding: "6px 8px", whiteSpace: "nowrap", color: "#6b7280" }}>
+                          <tr key={`d${i}`} style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td style={{ padding: "6px 8px", whiteSpace: "nowrap", color: "var(--text-muted)" }}>
                               {format(new Date(item.date + "T12:00:00"), "EEE d. MMM", { locale: nb })}
                             </td>
                             <td style={{ padding: "6px 8px", fontWeight: 600 }}>{item.hours}t</td>
-                            <td style={{ padding: "6px 8px", color: "#374151" }}>{item.ref ?? "—"}</td>
+                            <td style={{ padding: "6px 8px", color: "var(--text-secondary)" }}>{item.ref ?? "—"}</td>
                             <td style={{ padding: "6px 8px", display: "flex", gap: 4 }}>
                               {connectors.map(c => (
                                 <span key={c} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 99, fontSize: 12, fontWeight: 600, background: "#fee2e2", color: "#dc2626" }}>
@@ -478,10 +478,10 @@ function actionBadge(action: "create" | "update"): React.CSSProperties {
   };
 }
 
-const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
+const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid var(--btn-border)", borderRadius: 6, background: "var(--btn-bg)", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
 const bannerStyle = (bg: string): React.CSSProperties => ({ padding: "8px 12px", background: bg, borderRadius: 6, marginBottom: 12, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between" });
 function thStyle(align: "left" | "center"): React.CSSProperties {
-  return { padding: "10px 12px", textAlign: align, background: "#f9fafb", borderBottom: "2px solid #e5e7eb", fontWeight: 600, color: "#374151" };
+  return { padding: "10px 12px", textAlign: align, background: "var(--bg-subtle)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: "var(--text-secondary)" };
 }
 
 /** Compute Norwegian public holidays for a given year as a Set of "yyyy-MM-dd" strings */

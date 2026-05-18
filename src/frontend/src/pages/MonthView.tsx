@@ -166,7 +166,7 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
   return (
     <div>
       {monthTotal > 0 && (
-        <div style={{ marginBottom: 12, fontSize: 14, color: "#6b7280" }}>
+        <div style={{ marginBottom: 12, fontSize: 14, color: "var(--text-muted)" }}>
           Totalt denne måneden: <strong>{monthTotal}t</strong>
         </div>
       )}
@@ -200,23 +200,23 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
 
               return [
                 // Day-number header sub-row
-                <tr key={`${weekStartISO}-header`} style={{ background: "#eff6ff", borderBottom: "1px solid #bfdbfe" }}>
+                <tr key={`${weekStartISO}-header`} style={{ background: "var(--bg-blue-tint)", borderBottom: "1px solid var(--border-blue)" }}>
                   <td
                     onClick={() => toggleWeek(weekStartISO)}
-                    style={{ padding: "10px 12px", fontWeight: 700, color: "#2563eb", cursor: "pointer", fontSize: 14, whiteSpace: "nowrap" }}
+                    style={{ padding: "10px 12px", fontWeight: 700, color: "var(--accent)", cursor: "pointer", fontSize: 14, whiteSpace: "nowrap" }}
                   >
                     Uke {format(weekStart, "w", { locale: nb })} ▴
                     <span
                       onClick={e => { e.stopPropagation(); onWeekClick(weekStart); }}
                       title="Åpne i ukesvisning"
-                      style={{ marginLeft: 8, fontSize: 12, color: "#9ca3af", fontWeight: 400, textDecoration: "underline" }}
+                      style={{ marginLeft: 8, fontSize: 12, color: "var(--text-placeholder)", fontWeight: 400, textDecoration: "underline" }}
                     >↗ ukevisning</span>
                   </td>
                   {days.map(d => {
                     const red = isRedDay(d);
                     const today = isToday(d);
                     return (
-                      <td key={d.toISOString()} style={{ padding: "10px 8px", textAlign: "center", fontSize: 14, color: today ? "#2563eb" : red ? "#dc2626" : "#6b7280", fontWeight: today ? 700 : 400 }}>
+                      <td key={d.toISOString()} style={{ padding: "10px 8px", textAlign: "center", fontSize: 14, color: today ? "var(--accent)" : red ? "var(--red)" : "var(--text-muted)", fontWeight: today ? 700 : 400 }}>
                         {format(d, "d. MMM", { locale: nb })}
                       </td>
                     );
@@ -231,8 +231,8 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                   }, 0);
                   const weekIdx = weeks.findIndex(w => format(w, "yyyy-MM-dd") === weekStartISO);
                   return (
-                    <tr key={`${weekStartISO}-${project.id}`} style={{ borderBottom: "1px solid #e5e7eb", background: "#fafeff" }}>
-                      <td style={{ padding: "6px 12px", fontSize: 14, color: "#374151", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <tr key={`${weekStartISO}-${project.id}`} style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-row-hover)" }}>
+                      <td style={{ padding: "6px 12px", fontSize: 14, color: "var(--text-secondary)", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {project.displayName}
                       </td>
                       {days.map((d, dIdx) => {
@@ -245,9 +245,9 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                         const isFirst = pIdx === 0 && dIdx === 0;
                         const isLast = pIdx === projects.length - 1 && dIdx === days.length - 1;
                         return (
-                          <td key={ds} style={{ padding: "4px 4px", textAlign: "center", background: today ? "#eff6ff" : red ? "#fff5f5" : outside ? "#fafafa" : "transparent" }}>
+                          <td key={ds} style={{ padding: "4px 4px", textAlign: "center", background: today ? "var(--bg-blue-tint)" : red ? "var(--bg-red-tint)" : outside ? "var(--bg-muted)" : "transparent" }}>
                             {outside ? (
-                              <span style={{ fontSize: 14, color: "#d1d5db" }}>
+                              <span style={{ fontSize: 14, color: "var(--text-disabled)" }}>
                                 {cell.hours ? `${cell.hours}t` : "–"}
                               </span>
                             ) : (
@@ -270,27 +270,27 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                                   expandWeekAndFocus(format(weeks[weekIdx - 1], "yyyy-MM-dd"), "last");
                                 }
                               }}
-                              style={{ width: "100%", padding: "7px 4px", border: `1px solid ${cell.dirty ? "#f59e0b" : "#d1d5db"}`, borderRadius: 6, fontSize: 14, textAlign: "center", background: "#fff", outline: "none", color: "#111827", boxSizing: "border-box" }}
+                              style={{ width: "100%", padding: "7px 4px", border: `1px solid ${cell.dirty ? "#f59e0b" : "var(--input-border)"}`, borderRadius: 6, fontSize: 14, textAlign: "center", background: "var(--input-bg)", outline: "none", color: "var(--text-primary)", boxSizing: "border-box" }}
                             />
                             )}
                           </td>
                         );
                       })}
-                      <td style={{ padding: "6px 12px", textAlign: "center", fontSize: 14, color: rowTotal > 0 ? "#374151" : "#d1d5db", fontWeight: 600 }}>
+                      <td style={{ padding: "6px 12px", textAlign: "center", fontSize: 14, color: rowTotal > 0 ? "var(--text-secondary)" : "var(--text-disabled)", fontWeight: 600 }}>
                         {rowTotal > 0 ? `${rowTotal}t` : "–"}
                       </td>
                     </tr>
                   );
                 }),
                 // Day totals row
-                <tr key={`${weekStartISO}-total`} style={{ borderBottom: "2px solid #bfdbfe", background: "#eff6ff" }}>
-                  <td style={{ padding: "8px 12px", fontSize: 14, color: "#6b7280", fontWeight: 600 }}>Sum</td>
+                <tr key={`${weekStartISO}-total`} style={{ borderBottom: "2px solid var(--border-blue)", background: "var(--bg-blue-tint)" }}>
+                  <td style={{ padding: "8px 12px", fontSize: 14, color: "var(--text-muted)", fontWeight: 600 }}>Sum</td>
                   {weekDayTotals.map((t, i) => (
-                    <td key={i} style={{ padding: "8px 4px", textAlign: "center", fontSize: 14, fontWeight: 600, color: t > 0 ? "#1d4ed8" : "#d1d5db" }}>
+                    <td key={i} style={{ padding: "8px 4px", textAlign: "center", fontSize: 14, fontWeight: 600, color: t > 0 ? "var(--accent-dark)" : "var(--text-disabled)" }}>
                       {t > 0 ? `${t}t` : "–"}
                     </td>
                   ))}
-                  <td style={{ padding: "8px 12px", textAlign: "center", fontSize: 14, fontWeight: 700, color: weekTotal > 0 ? "#1d4ed8" : "#d1d5db" }}>
+                  <td style={{ padding: "8px 12px", textAlign: "center", fontSize: 14, fontWeight: 700, color: weekTotal > 0 ? "var(--accent-dark)" : "var(--text-disabled)" }}>
                     {weekTotal > 0 ? `${weekTotal}t` : "–"}
                   </td>
                 </tr>,
@@ -301,10 +301,10 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
             const weekSum = days.filter(inMonth).reduce((s, d) => s + (totals.get(format(d, "yyyy-MM-dd")) ?? 0), 0);
 
             return (
-              <tr key={weekStartISO} style={{ borderBottom: "1px solid #e5e7eb" }}>
+              <tr key={weekStartISO} style={{ borderBottom: "1px solid var(--border)" }}>
                 <td
                   onClick={() => toggleWeek(weekStartISO)}
-                  style={{ padding: "10px 12px", fontWeight: 600, color: "#2563eb", cursor: "pointer", whiteSpace: "nowrap", fontSize: 14 }}
+                  style={{ padding: "10px 12px", fontWeight: 600, color: "var(--accent)", cursor: "pointer", whiteSpace: "nowrap", fontSize: 14 }}
                 >
                   Uke {format(weekStart, "w", { locale: nb })}
                 </td>
@@ -314,22 +314,22 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                   const outside = !inMonth(d);
                   const red = isRedDay(d);
                   const today = isToday(d);
-                  const bg = today ? "#eff6ff" : red ? "#fff5f5" : outside ? "#fafafa" : "transparent";
-                  const color = outside ? "#d1d5db" : red ? "#dc2626" : hours ? "#111827" : "#9ca3af";
+                  const bg = today ? "var(--bg-blue-tint)" : red ? "var(--bg-red-tint)" : outside ? "var(--bg-muted)" : "transparent";
+                  const color = outside ? "var(--text-disabled)" : red ? "var(--red)" : hours ? "var(--text-primary)" : "var(--text-placeholder)";
                   return (
                     <td
                       key={ds}
                       onClick={() => toggleWeek(weekStartISO)}
                       style={{ padding: "10px 8px", textAlign: "center", background: bg, color, fontWeight: hours && !outside ? 600 : 400, cursor: "pointer" }}
                     >
-                      <div style={{ fontSize: 11, color: outside ? "#e5e7eb" : red ? "#fca5a5" : "#9ca3af", marginBottom: 2 }}>
+                      <div style={{ fontSize: 11, color: outside ? "var(--text-faint)" : red ? "var(--red-light)" : "var(--text-placeholder)", marginBottom: 2 }}>
                         {format(d, "d")}
                       </div>
-                      {outside ? "" : hours ? `${hours}t` : <span style={{ color: "#e5e7eb" }}>·</span>}
+                      {outside ? "" : hours ? `${hours}t` : <span style={{ color: "var(--text-faint)" }}>·</span>}
                     </td>
                   );
                 })}
-                <td style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: weekSum > 0 ? "#111827" : "#d1d5db" }}>
+                <td style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: weekSum > 0 ? "var(--text-primary)" : "var(--text-disabled)" }}>
                   {weekSum > 0 ? `${weekSum}t` : "–"}
                 </td>
               </tr>
@@ -341,7 +341,7 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
   );
 }
 
-const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
+const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid var(--btn-border)", borderRadius: 6, background: "var(--btn-bg)", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
 function thStyle(align: "left" | "center", red: boolean): React.CSSProperties {
-  return { padding: "10px 12px", textAlign: align, background: red ? "#fff5f5" : "#f9fafb", borderBottom: "2px solid #e5e7eb", fontWeight: 600, color: red ? "#dc2626" : "#374151" };
+  return { padding: "10px 12px", textAlign: align, background: red ? "var(--bg-red-tint)" : "var(--bg-subtle)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: red ? "var(--red)" : "var(--text-secondary)" };
 }

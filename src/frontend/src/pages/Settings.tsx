@@ -41,20 +41,20 @@ export function Settings() {
       </div>
 
       {showAdd && (
-        <div style={{ padding: 16, background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 16, display: "flex", gap: 8 }}>
+        <div style={{ padding: 16, background: "var(--surface)", borderRadius: 8, border: "1px solid var(--border)", marginBottom: 16, display: "flex", gap: 8 }}>
           <input autoFocus placeholder="Prosjektnavn" value={newName} onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addMutation.mutate(newName)}
             style={{ ...inputStyle, flex: 1 }} />
-          <button onClick={() => addMutation.mutate(newName)} style={{ ...btnStyle, background: "#2563eb", color: "#fff" }}>Legg til</button>
+          <button onClick={() => addMutation.mutate(newName)} style={{ ...btnStyle, background: "var(--accent)", color: "var(--nav-text)" }}>Legg til</button>
           <button onClick={() => setShowAdd(false)} style={btnStyle}>Avbryt</button>
         </div>
       )}
 
       {projects.length === 0 ? (
-        <p style={{ color: "#6b7280" }}>Ingen prosjekter ennå. Legg til et for å komme i gang.</p>
+        <p style={{ color: "var(--text-muted)" }}>Ingen prosjekter ennå. Legg til et for å komme i gang.</p>
       ) : (
         projects.map((p) => (
-          <div key={p.id} style={{ padding: "14px 16px", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+          <div key={p.id} style={{ padding: "14px 16px", background: "var(--surface)", borderRadius: 8, border: "1px solid var(--border)", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600 }}>{p.displayName}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
@@ -69,12 +69,12 @@ export function Settings() {
                   </span>
                 )}
                 {!p.mapping?.tripletex && !p.mapping?.jira && (
-                  <span style={badgeStyle("#f3f4f6", "#6b7280")}>Ingen kobling</span>
+                  <span style={badgeStyle("#f3f4f6", "var(--text-muted)")}>Ingen kobling</span>
                 )}
               </div>
             </div>
             <button onClick={() => setEditProject(p)} style={btnStyle}>Konfigurer</button>
-            <button onClick={() => deleteMutation.mutate(p.id)} style={{ ...btnStyle, color: "#dc2626", borderColor: "#dc2626" }}>Slett</button>
+            <button onClick={() => deleteMutation.mutate(p.id)} style={{ ...btnStyle, color: "var(--red)", borderColor: "var(--red)" }}>Slett</button>
           </div>
         ))
       )}
@@ -155,16 +155,16 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, overflowY: "auto" }}>
-      <div style={{ background: "#fff", borderRadius: 12, padding: 28, minWidth: 420, maxWidth: 520, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", margin: "40px auto" }}>
+      <div style={{ background: "var(--surface)", borderRadius: 12, padding: 28, minWidth: 420, maxWidth: 520, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", margin: "40px auto" }}>
         <h2 style={{ marginBottom: 20, fontSize: 18 }}>Konfigurer prosjekt</h2>
 
         <label style={labelStyle}>Visningsnavn</label>
         <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} style={inputStyle} />
 
-        <div style={{ margin: "20px 0 8px", fontWeight: 600, fontSize: 15, color: "#2563eb" }}>Tripletex</div>
+        <div style={{ margin: "20px 0 8px", fontWeight: 600, fontSize: 15, color: "var(--accent)" }}>Tripletex</div>
         <label style={labelStyle}>Prosjekt</label>
         {loadingTt ? (
-          <div style={{ ...inputStyle, color: "#6b7280", background: "#f9fafb" }}>
+          <div style={{ ...inputStyle, color: "var(--text-muted)", background: "var(--bg-subtle)" }}>
             ⏳ Logger inn i Tripletex… (kan ta 5–10 sek)
           </div>
         ) : ttError ? (
@@ -187,7 +187,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
           <>
             <label style={labelStyle}>Aktivitet</label>
             {loadingAct ? (
-              <div style={{ ...inputStyle, color: "#6b7280", background: "#f9fafb" }}>⏳ Henter aktiviteter…</div>
+              <div style={{ ...inputStyle, color: "var(--text-muted)", background: "var(--bg-subtle)" }}>⏳ Henter aktiviteter…</div>
             ) : actError ? (
               <div style={{ padding: "8px 10px", background: "#fee2e2", borderRadius: 6, fontSize: 13, color: "#dc2626" }}>
                 Klarte ikke hente aktiviteter.
@@ -219,7 +219,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
         <div style={{ margin: "20px 0 8px", fontWeight: 600, fontSize: 15, color: "#059669" }}>Jira</div>
         <label style={labelStyle}>Prosjekt</label>
         {loadingJira ? (
-          <div style={{ ...inputStyle, color: "#6b7280", background: "#f9fafb" }}>⏳ Henter Jira-prosjekter…</div>
+          <div style={{ ...inputStyle, color: "var(--text-muted)", background: "var(--bg-subtle)" }}>⏳ Henter Jira-prosjekter…</div>
         ) : jiraError ? (
           <div style={{ padding: "8px 10px", background: "#fee2e2", borderRadius: 6, fontSize: 13, color: "#dc2626", marginBottom: 4 }}>
             Klarte ikke hente Jira-prosjekter. Sjekk jira-secrets i secrets.json.
@@ -240,7 +240,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
           <>
             <label style={labelStyle}>Sak (Issue)</label>
             {loadingIssues ? (
-              <div style={{ ...inputStyle, color: "#6b7280", background: "#f9fafb" }}>⏳ Henter issues…</div>
+              <div style={{ ...inputStyle, color: "var(--text-muted)", background: "var(--bg-subtle)" }}>⏳ Henter issues…</div>
             ) : (
               <select value={jiraIssueKey} onChange={(e) => setJiraIssueKey(e.target.value)} style={inputStyle}>
                 <option value="">— Ingen (logg på prosjektnivå) —</option>
@@ -253,7 +253,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
         )}
 
         <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
-          <button onClick={save} disabled={saving} style={{ ...btnStyle, background: "#2563eb", color: "#fff", flex: 1 }}>
+          <button onClick={save} disabled={saving} style={{ ...btnStyle, background: "var(--accent)", color: "var(--nav-text)", flex: 1 }}>
             {saving ? "Lagrer…" : "Lagre"}
           </button>
           <button onClick={onClose} style={{ ...btnStyle, flex: 1 }}>Avbryt</button>
@@ -263,9 +263,9 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
   );
 }
 
-const btnStyle: React.CSSProperties = { padding: "6px 14px", border: "1px solid #d1d5db", borderRadius: 6, background: "#fff", fontSize: 14 };
-const labelStyle: React.CSSProperties = { display: "block", fontSize: 13, fontWeight: 500, color: "#374151", marginBottom: 4, marginTop: 12 };
-const inputStyle: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14 };
+const btnStyle: React.CSSProperties = { padding: "6px 14px", border: "1px solid var(--btn-border)", borderRadius: 6, background: "var(--btn-bg)", fontSize: 14 };
+const labelStyle: React.CSSProperties = { display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-secondary)", marginBottom: 4, marginTop: 12 };
+const inputStyle: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid var(--input-border)", borderRadius: 6, fontSize: 14, background: "var(--input-bg)", color: "var(--text-primary)" };
 function badgeStyle(bg: string, color: string): React.CSSProperties {
   return { background: bg, color, padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500 };
 }
