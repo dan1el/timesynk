@@ -270,7 +270,7 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                                   expandWeekAndFocus(format(weeks[weekIdx - 1], "yyyy-MM-dd"), "last");
                                 }
                               }}
-                              style={{ width: "100%", padding: "7px 4px", border: `1px solid ${cell.dirty ? "#f59e0b" : "var(--input-border)"}`, borderRadius: 6, fontSize: 14, textAlign: "center", background: "var(--input-bg)", outline: "none", color: "var(--text-primary)", boxSizing: "border-box" }}
+                              style={{ width: "100%", padding: "7px 4px", border: `1px solid ${cell.dirty ? "var(--amber)" : "var(--input-border)"}`, borderRadius: 6, fontSize: 14, textAlign: "center", background: "var(--input-bg)", outline: "none", color: "var(--text-primary)", boxSizing: "border-box" }}
                             />
                             )}
                           </td>
@@ -315,14 +315,14 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                   const red = isRedDay(d);
                   const today = isToday(d);
                   const bg = today ? "var(--bg-blue-tint)" : red ? "var(--bg-red-tint)" : outside ? "var(--bg-muted)" : "transparent";
-                  const color = outside ? "var(--text-disabled)" : red ? "var(--red)" : hours ? "var(--text-primary)" : "var(--text-placeholder)";
+                  const color = outside ? "var(--text-disabled)" : today ? "var(--text-primary)" : red ? "var(--red)" : hours ? "var(--text-primary)" : "var(--text-placeholder)";
                   return (
                     <td
                       key={ds}
                       onClick={() => toggleWeek(weekStartISO)}
                       style={{ padding: "10px 8px", textAlign: "center", background: bg, color, fontWeight: hours && !outside ? 600 : 400, cursor: "pointer" }}
                     >
-                      <div style={{ fontSize: 11, color: outside ? "var(--text-faint)" : red ? "var(--red-light)" : "var(--text-placeholder)", marginBottom: 2 }}>
+                      <div style={{ fontSize: 11, color: outside ? "var(--text-faint)" : today ? "var(--text-secondary)" : red ? "var(--red-light)" : "var(--text-placeholder)", marginBottom: 2 }}>
                         {format(d, "d")}
                       </div>
                       {outside ? "" : hours ? `${hours}t` : <span style={{ color: "var(--text-faint)" }}>·</span>}

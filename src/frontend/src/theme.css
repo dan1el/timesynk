@@ -26,6 +26,39 @@
   --input-border: #d1d5db;
   --nav-bg: #1e40af;
   --nav-text: #ffffff;
+
+  --amber: #f59e0b;
+  --bg-warning: #fffbeb;
+  --border-warning: #fcd34d;
+  --text-warning-strong: #92400e;
+  --text-warning: #78350f;
+  --bg-warning-subtle: #fef3c7;
+
+  --bg-error: #fee2e2;
+  --text-error: #dc2626;
+
+  --bg-synced: #f0fdf4;
+  --border-synced: #86efac;
+  --bg-purple-tint: #ede9fe;
+  --text-success: #059669;
+
+  --btn-pull-bg: #7c3aed;
+  --btn-push-bg: #059669;
+
+  --badge-info-bg: #dbeafe;
+  --badge-info-text: #1e40af;
+  --badge-ok-bg: #dcfce7;
+  --badge-ok-text: #166534;
+  --badge-neutral-bg: #f3f4f6;
+  --badge-warning-bg: #fef3c7;
+  --badge-warning-text: #92400e;
+  --badge-delete-bg: #fee2e2;
+  --badge-delete-text: #dc2626;
+
+  --action-create-bg: #dbeafe;
+  --action-create-text: #1d4ed8;
+  --action-update-bg: #fef9c3;
+  --action-update-text: #854d0e;
 }
 
 [data-theme="dark"] {
@@ -48,7 +81,8 @@
   --accent: #60a5fa;
   --accent-dark: #93c5fd;
   --red: #f87171;
-  --red-light: #7f1d1d;
+  /* light red must stay bright so it reads on the dark red-tint bg */
+  --red-light: #fca5a5;
   --green: #4ade80;
   --btn-bg: #1f2937;
   --btn-border: #4b5563;
@@ -56,10 +90,49 @@
   --input-border: #4b5563;
   --nav-bg: #1e3a8a;
   --nav-text: #f9fafb;
+
+  --amber: #f59e0b;
+  --bg-warning: #1c1400;
+  --border-warning: #78350f;
+  --text-warning-strong: #fde68a;
+  --text-warning: #fbbf24;
+  --bg-warning-subtle: #2d1a00;
+
+  --bg-error: #2d0a0a;
+  --text-error: #f87171;
+
+  --bg-synced: #0a1a0f;
+  --border-synced: #166534;
+  --bg-purple-tint: #2d1b4e;
+  --text-success: #34d399;
+
+  --btn-pull-bg: #8b5cf6;
+  --btn-push-bg: #10b981;
+
+  --badge-info-bg: #1e3a5f;
+  --badge-info-text: #93c5fd;
+  --badge-ok-bg: #0a1a0f;
+  --badge-ok-text: #4ade80;
+  --badge-neutral-bg: #374151;
+  --badge-warning-bg: #2d1a00;
+  --badge-warning-text: #fde68a;
+  --badge-delete-bg: #2d0a0a;
+  --badge-delete-text: #f87171;
+
+  --action-create-bg: #1e3a5f;
+  --action-create-text: #93c5fd;
+  --action-update-bg: #2d2200;
+  --action-update-text: #fde68a;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text-primary);
   min-height: 100vh;
+}
+
+/* Native spinner arrows and select chevrons follow the colour scheme */
+[data-theme="dark"] input,
+[data-theme="dark"] select {
+  color-scheme: dark;
 }

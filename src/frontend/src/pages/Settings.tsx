@@ -59,21 +59,21 @@ export function Settings() {
               <div style={{ fontWeight: 600 }}>{p.displayName}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                 {p.mapping?.syncDirection === "tripletex_only" && (
-                  <span style={badgeStyle("#fef3c7", "#92400e")}>Kun Tripletex</span>
+                  <span style={badgeStyle("var(--badge-warning-bg)", "var(--badge-warning-text)")}>Kun Tripletex</span>
                 )}
                 {p.mapping?.tripletex && (
-                  <span style={badgeStyle("#dbeafe", "#1e40af")}>
+                  <span style={badgeStyle("var(--badge-info-bg)", "var(--badge-info-text)")}>
                     {p.mapping.tripletex.isAbsence ? "Fravær: " : "Tripletex: "}
                     {p.mapping.tripletex.isAbsence ? p.mapping.tripletex.activityName : `${p.mapping.tripletex.projectName} → ${p.mapping.tripletex.activityName}`}
                   </span>
                 )}
                 {p.mapping?.jira && p.mapping?.syncDirection !== "tripletex_only" && (
-                  <span style={badgeStyle("#dcfce7", "#166534")}>
+                  <span style={badgeStyle("var(--badge-ok-bg)", "var(--badge-ok-text)")}>
                     Jira: {p.mapping.jira.projectKey}{p.mapping.jira.issueKey ? ` #${p.mapping.jira.issueKey}` : ""}
                   </span>
                 )}
                 {!p.mapping?.tripletex && !p.mapping?.jira && (
-                  <span style={badgeStyle("#f3f4f6", "var(--text-muted)")}>Ingen kobling</span>
+                  <span style={badgeStyle("var(--badge-neutral-bg)", "var(--text-muted)")}>Ingen kobling</span>
                 )}
               </div>
             </div>
@@ -191,14 +191,14 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
           <button
             type="button"
             onClick={() => setSyncDirection("both")}
-            style={{ flex: 1, padding: "8px", border: "none", fontSize: 13, cursor: "pointer", background: syncDirection === "both" ? "var(--accent)" : "var(--btn-bg)", color: syncDirection === "both" ? "#fff" : "var(--text-secondary)" }}
+            style={{ flex: 1, padding: "8px", border: "none", fontSize: 13, cursor: "pointer", background: syncDirection === "both" ? "var(--accent)" : "var(--btn-bg)", color: syncDirection === "both" ? "var(--nav-text)" : "var(--text-secondary)" }}
           >
             ⇅ Jira og Tripletex
           </button>
           <button
             type="button"
             onClick={() => setSyncDirection("tripletex_only")}
-            style={{ flex: 1, padding: "8px", border: "none", borderLeft: "1px solid var(--border)", fontSize: 13, cursor: "pointer", background: syncDirection === "tripletex_only" ? "#f59e0b" : "var(--btn-bg)", color: syncDirection === "tripletex_only" ? "#fff" : "var(--text-secondary)" }}
+            style={{ flex: 1, padding: "8px", border: "none", borderLeft: "1px solid var(--border)", fontSize: 13, cursor: "pointer", background: syncDirection === "tripletex_only" ? "var(--amber)" : "var(--btn-bg)", color: syncDirection === "tripletex_only" ? "var(--nav-text)" : "var(--text-secondary)" }}
           >
             → Kun Tripletex
           </button>
@@ -217,14 +217,14 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
           <button
             type="button"
             onClick={() => { setIsAbsence(false); setTtActivityId(""); setTtActivityName(""); }}
-            style={{ flex: 1, padding: "7px", border: "none", fontSize: 13, cursor: "pointer", background: !isAbsence ? "var(--accent)" : "var(--btn-bg)", color: !isAbsence ? "#fff" : "var(--text-secondary)" }}
+            style={{ flex: 1, padding: "7px", border: "none", fontSize: 13, cursor: "pointer", background: !isAbsence ? "var(--accent)" : "var(--btn-bg)", color: !isAbsence ? "var(--nav-text)" : "var(--text-secondary)" }}
           >
             Prosjektaktivitet
           </button>
           <button
             type="button"
             onClick={() => { setIsAbsence(true); setTtProjectId(""); setTtProjectName(""); setTtActivityId(""); setTtActivityName(""); }}
-            style={{ flex: 1, padding: "7px", border: "none", borderLeft: "1px solid var(--border)", fontSize: 13, cursor: "pointer", background: isAbsence ? "var(--accent)" : "var(--btn-bg)", color: isAbsence ? "#fff" : "var(--text-secondary)" }}
+            style={{ flex: 1, padding: "7px", border: "none", borderLeft: "1px solid var(--border)", fontSize: 13, cursor: "pointer", background: isAbsence ? "var(--accent)" : "var(--btn-bg)", color: isAbsence ? "var(--nav-text)" : "var(--text-secondary)" }}
           >
             Fravær / intern aktivitet
           </button>
@@ -238,7 +238,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
                 ⏳ Logger inn i Tripletex… (kan ta 5–10 sek)
               </div>
             ) : ttError ? (
-              <div style={{ padding: "8px 10px", background: "#fee2e2", borderRadius: 6, fontSize: 13, color: "#dc2626", marginBottom: 4 }}>
+              <div style={{ padding: "8px 10px", background: "var(--bg-error)", borderRadius: 6, fontSize: 13, color: "var(--text-error)", marginBottom: 4 }}>
                 Klarte ikke hente Tripletex-prosjekter. Sjekk secrets.json.
               </div>
             ) : ttProjects.length > 0 ? (
@@ -261,7 +261,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
             {loadingActivities ? (
               <div style={{ ...inputStyle, color: "var(--text-muted)", background: "var(--bg-subtle)" }}>⏳ Henter aktiviteter…</div>
             ) : actError && !isAbsence ? (
-              <div style={{ padding: "8px 10px", background: "#fee2e2", borderRadius: 6, fontSize: 13, color: "#dc2626" }}>
+              <div style={{ padding: "8px 10px", background: "var(--bg-error)", borderRadius: 6, fontSize: 13, color: "var(--text-error)" }}>
                 Klarte ikke hente aktiviteter.
               </div>
             ) : (
@@ -290,12 +290,12 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
 
         {syncDirection === "both" && (
           <>
-            <div style={{ margin: "20px 0 8px", fontWeight: 600, fontSize: 15, color: "#059669" }}>Jira</div>
+            <div style={{ margin: "20px 0 8px", fontWeight: 600, fontSize: 15, color: "var(--text-success)" }}>Jira</div>
             <label style={labelStyle}>Prosjekt</label>
             {loadingJira ? (
               <div style={{ ...inputStyle, color: "var(--text-muted)", background: "var(--bg-subtle)" }}>⏳ Henter Jira-prosjekter…</div>
             ) : jiraError ? (
-              <div style={{ padding: "8px 10px", background: "#fee2e2", borderRadius: 6, fontSize: 13, color: "#dc2626", marginBottom: 4 }}>
+              <div style={{ padding: "8px 10px", background: "var(--bg-error)", borderRadius: 6, fontSize: 13, color: "var(--text-error)", marginBottom: 4 }}>
                 Klarte ikke hente Jira-prosjekter. Sjekk jira-secrets i secrets.json.
               </div>
             ) : jiraProjects.length > 0 ? (

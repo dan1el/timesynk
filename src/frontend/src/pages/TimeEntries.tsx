@@ -215,10 +215,10 @@ export function TimeEntries() {
 
         {/* Right: sync buttons */}
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => pullMutation.mutate()} disabled={pullMutation.isPending} style={{ ...btnStyle, background: "#7c3aed", color: "#fff", whiteSpace: "nowrap" }}>
+          <button onClick={() => pullMutation.mutate()} disabled={pullMutation.isPending} style={{ ...btnStyle, background: "var(--btn-pull-bg)", color: "#fff", whiteSpace: "nowrap" }}>
             {pullMutation.isPending ? "Henter…" : "⬇ Pull fra Tripletex"}
           </button>
-          <button onClick={openPushPreview} disabled={syncMutation.isPending} style={{ ...btnStyle, background: "#059669", color: "#fff", whiteSpace: "nowrap" }}>
+          <button onClick={openPushPreview} disabled={syncMutation.isPending} style={{ ...btnStyle, background: "var(--btn-push-bg)", color: "#fff", whiteSpace: "nowrap" }}>
             {syncMutation.isPending ? "Syncing…" : "⇅ Push til Jira og Tripletex"}
           </button>
         </div>
@@ -230,14 +230,14 @@ export function TimeEntries() {
         const pulled = results.reduce((s, r) => s + r.pulled, 0);
         const skipped = results.reduce((s, r) => s + r.skipped, 0);
         return (
-          <div style={bannerStyle("#ede9fe")}>
+          <div style={bannerStyle("var(--bg-purple-tint)")}>
             <span>Pull ferdig: {pulled} nye importert, {skipped} uten mapping.</span>
             <button onClick={() => pullMutation.reset()} style={{ ...btnStyle, padding: "2px 8px", fontSize: 13 }}>✕</button>
           </div>
         );
       })()}
       {(pullMutation.isError || syncMutation.isError) && (
-        <div style={bannerStyle("#fee2e2")}>
+        <div style={bannerStyle("var(--bg-error)")}>
           Feil: {((pullMutation.error ?? syncMutation.error) as Error)?.message}
         </div>
       )}
@@ -259,7 +259,7 @@ export function TimeEntries() {
                     {r.error
                       ? <span style={{ color: "var(--red)" }}>❌ {r.error}</span>
                       : <>
-                          {r.tripletex && <span style={{ color: "#059669" }}>✓ Tripletex</span>}
+                          {r.tripletex && <span style={{ color: "var(--text-success)" }}>✓ Tripletex</span>}
                           {r.jira && <span style={{ color: "var(--accent)" }}>✓ Jira</span>}
                           {!r.tripletex && !r.jira && !r.error && <span style={{ color: "var(--text-muted)" }}>Ingen endringer</span>}
                         </>
@@ -275,12 +275,12 @@ export function TimeEntries() {
 
       {/* Setup warning */}
       {view === "week" && !loadingProjects && !hasProjects && (
-        <div style={{ padding: "16px 20px", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "16px 20px", background: "var(--bg-warning)", border: "1px solid var(--border-warning)", borderRadius: 8, marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontWeight: 600, color: "#92400e" }}>⚙️ Ingen prosjekter konfigurert</div>
-            <div style={{ fontSize: 13, color: "#78350f", marginTop: 4 }}>Gå til Innstillinger for å koble prosjekter før du fører timer.</div>
+            <div style={{ fontWeight: 600, color: "var(--text-warning-strong)" }}>⚙️ Ingen prosjekter konfigurert</div>
+            <div style={{ fontSize: 13, color: "var(--text-warning)", marginTop: 4 }}>Gå til Innstillinger for å koble prosjekter før du fører timer.</div>
           </div>
-          <a href="/settings" style={{ ...btnStyle, textDecoration: "none", color: "#92400e", borderColor: "#f59e0b", background: "#fef3c7" }}>
+          <a href="/settings" style={{ ...btnStyle, textDecoration: "none", color: "var(--text-warning-strong)", borderColor: "var(--amber)", background: "var(--bg-warning-subtle)" }}>
             Innstillinger →
           </a>
         </div>
@@ -302,7 +302,7 @@ export function TimeEntries() {
                   <div style={{ fontWeight: 600, color: isToday(d) ? "var(--accent)" : isRedDay(d) ? "var(--red)" : "var(--text-secondary)" }}>
                     {format(d, "EEE", { locale: nb })}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 400, color: isRedDay(d) ? "var(--red)" : "var(--text-muted)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 400, color: isRedDay(d) ? "var(--red)" : isToday(d) ? "var(--text-secondary)" : "var(--text-muted)" }}>
                     {format(d, "d. MMM", { locale: nb })}
                   </div>
                 </th>
@@ -341,10 +341,10 @@ export function TimeEntries() {
                               width: "100%",
                               textAlign: "center",
                               padding: "7px 4px",
-                              border: `1px solid ${cell.dirty ? "#f59e0b" : synced ? "#86efac" : "var(--input-border)"}`,
+                              border: `1px solid ${cell.dirty ? "var(--amber)" : synced ? "var(--border-synced)" : "var(--input-border)"}`,
                               borderRadius: 6,
                               fontSize: 14,
-                              background: synced ? "#f0fdf4" : "var(--input-bg)",
+                              background: synced ? "var(--bg-synced)" : "var(--input-bg)",
                               outline: "none",
                               color: "var(--text-primary)",
                               boxSizing: "border-box",
@@ -438,7 +438,7 @@ export function TimeEntries() {
                             <td style={{ padding: "6px 8px", color: "var(--text-secondary)" }}>{item.ref ?? "—"}</td>
                             <td style={{ padding: "6px 8px", display: "flex", gap: 4 }}>
                               {connectors.map(c => (
-                                <span key={c} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 99, fontSize: 12, fontWeight: 600, background: "#fee2e2", color: "#dc2626" }}>
+                                <span key={c} style={{ display: "inline-block", padding: "2px 8px", borderRadius: 99, fontSize: 12, fontWeight: 600, background: "var(--badge-delete-bg)", color: "var(--badge-delete-text)" }}>
                                   Slett {c}
                                 </span>
                               ))}
@@ -457,7 +457,7 @@ export function TimeEntries() {
                 <button
                   onClick={() => syncMutation.mutate()}
                   disabled={syncMutation.isPending}
-                  style={{ ...btnStyle, background: "#059669", color: "#fff", borderColor: "#059669" }}
+                  style={{ ...btnStyle, background: "var(--btn-push-bg)", color: "#fff", borderColor: "var(--btn-push-bg)" }}
                 >
                   {syncMutation.isPending ? "Sender…" : "Bekreft"}
                 </button>
@@ -473,8 +473,8 @@ export function TimeEntries() {
 function actionBadge(action: "create" | "update"): React.CSSProperties {
   return {
     display: "inline-block", padding: "2px 8px", borderRadius: 99, fontSize: 12, fontWeight: 600,
-    background: action === "create" ? "#dbeafe" : "#fef9c3",
-    color: action === "create" ? "#1d4ed8" : "#854d0e",
+    background: action === "create" ? "var(--action-create-bg)" : "var(--action-update-bg)",
+    color: action === "create" ? "var(--action-create-text)" : "var(--action-update-text)",
   };
 }
 

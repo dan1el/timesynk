@@ -1,4 +1,4 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, sans-serif; background: #f9fafb; color: #111827; }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text-primary); }
 button { cursor: pointer; }
 input, select, textarea { font: inherit; }
