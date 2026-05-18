@@ -80,6 +80,15 @@ app.get("/api/connectors/tripletex/projects", async (_req, res) => {
   }
 });
 
+app.get("/api/connectors/tripletex/activities/absence", async (_req, res) => {
+  try {
+    const activities = await cached("tt-absence-activities", 5 * 60_000, () => tripletex.getAbsenceActivities());
+    res.json(activities);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/connectors/tripletex/activities/:projectId", async (req, res) => {
   try {
     const key = `tt-activities-${req.params.projectId}`;
@@ -248,7 +257,8 @@ app.get("/api/sync/preview", async (req, res) => {
       const mapping = mappingMap.get(entry.projectId);
       if (!mapping) continue;
       const name = projectMap.get(entry.projectId) ?? entry.projectId;
-      if (mapping.jira && !entry.externalIds.jira && !claimedEntryIds.has(entry.id)) {
+      const jiraEnabled = mapping.syncDirection !== "tripletex_only";
+      if (jiraEnabled && mapping.jira && !entry.externalIds.jira && !claimedEntryIds.has(entry.id)) {
         toUpsert.push({ id: entry.id, date: entry.date, hours: entry.hours, projectName: name, connector: "jira", action: "create" });
       }
       if (mapping.tripletex && !entry.externalIds.tripletex) {
@@ -283,7 +293,11 @@ app.get("/api/sync/preview", async (req, res) => {
               toUpsert.push({ id: linkedEntry.id, date: linkedEntry.date, hours: linkedEntry.hours, projectName: name, connector: "tripletex", action: "update" });
             }
           } else {
-            const mapping = mappings.find(m => m.tripletex && String(m.tripletex.projectId) === re.projectId);
+            const mapping = mappings.find(m => m.tripletex && (
+              m.tripletex.isAbsence
+                ? re.projectId === `absence:${m.tripletex.activityId}`
+                : String(m.tripletex.projectId) === re.projectId
+            ));
             const projectName = mapping ? (projectMap.get(mapping.projectId) ?? mapping.tripletex!.projectName) : re.projectId;
             toDelete.push({ connector: "tripletex", tripletexId: ttxId, date: re.date, hours: re.hours, ref: projectName });
           }
@@ -375,7 +389,8 @@ app.post("/api/sync/push", async (req, res) => {
             result.tripletex = entry.externalIds.tripletex;
           }
         }
-        if (mapping.jira && !entry.externalIds.jira) {
+        const jiraEnabled = mapping.syncDirection !== "tripletex_only";
+        if (jiraEnabled && mapping.jira && !entry.externalIds.jira) {
           const worklogId = await jira.pushEntry(entry, mapping);
           result.jira = `${mapping.jira.issueKey ?? mapping.jira.projectKey}:${worklogId}`;
         }
@@ -440,9 +455,16 @@ app.post("/api/sync/pull", async (req, res) => {
     // Tripletex dateTo is exclusive – pass first day of next month to include last day
     const toExclusive = mo === 12 ? `${yr + 1}-01-01` : `${yr}-${String(mo + 1).padStart(2, "0")}-01`;
     const mappings = db.getProjectMappings();
-    const reverseMap = new Map<number, string>();
+    // Build lookup: Tripletex projectId → local projectId (for regular project entries)
+    // Also: "absence:<activityId>" → local projectId (for absence entries)
+    const reverseMap = new Map<string, string>();
     for (const m of mappings) {
-      if (m.tripletex?.projectId) reverseMap.set(m.tripletex.projectId, m.projectId);
+      if (!m.tripletex) continue;
+      if (m.tripletex.isAbsence) {
+        reverseMap.set(`absence:${m.tripletex.activityId}`, m.projectId);
+      } else if (m.tripletex.projectId != null) {
+        reverseMap.set(String(m.tripletex.projectId), m.projectId);
+      }
     }
 
     const entries = await tripletex.getEntries(from, toExclusive);
@@ -451,7 +473,7 @@ app.post("/api/sync/pull", async (req, res) => {
     let skipped = 0;
 
     for (const entry of entries) {
-      const localProjectId = reverseMap.get(Number(entry.projectId));
+      const localProjectId = reverseMap.get(entry.projectId);
       if (!localProjectId) {
         console.log(`[pull] skipped entry ${entry.date} ${entry.hours}t projectId=${entry.projectId} (no mapping)`);
         skipped++; continue;

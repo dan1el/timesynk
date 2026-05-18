@@ -51,6 +51,14 @@ try {
   db.exec("ALTER TABLE connector_sessions ADD COLUMN employee_id TEXT NOT NULL DEFAULT ''");
 } catch { /* column already exists */ }
 
+// Migrate: add sync_direction and is_absence columns to project_mappings
+try {
+  db.exec("ALTER TABLE project_mappings ADD COLUMN sync_direction TEXT NOT NULL DEFAULT 'both'");
+} catch { /* already exists */ }
+try {
+  db.exec("ALTER TABLE project_mappings ADD COLUMN tripletex_is_absence INTEGER NOT NULL DEFAULT 0");
+} catch { /* already exists */ }
+
 export function getProjects(): Project[] {
   return (db.prepare("SELECT id, display_name FROM projects ORDER BY display_name").all() as any[])
     .map((r) => ({ id: r.id, displayName: r.display_name }));
@@ -75,13 +83,17 @@ export function getProjectMapping(projectId: string): ProjectMapping | undefined
 }
 
 function rowToMapping(r: any): ProjectMapping {
-  const m: ProjectMapping = { projectId: r.project_id };
-  if (r.tripletex_project_id) {
+  const m: ProjectMapping = {
+    projectId: r.project_id,
+    syncDirection: (r.sync_direction ?? "both") as "both" | "tripletex_only",
+  };
+  if (r.tripletex_activity_id) {
     m.tripletex = {
-      projectId: r.tripletex_project_id,
-      projectName: r.tripletex_project_name,
+      projectId: r.tripletex_project_id ?? null,
+      projectName: r.tripletex_project_name ?? "",
       activityId: r.tripletex_activity_id,
       activityName: r.tripletex_activity_name,
+      isAbsence: !!r.tripletex_is_absence,
     };
   }
   if (r.jira_project_key) {
@@ -97,14 +109,16 @@ function rowToMapping(r: any): ProjectMapping {
 export function upsertProjectMapping(mapping: ProjectMapping): void {
   db.prepare(`
     INSERT OR REPLACE INTO project_mappings
-      (project_id, tripletex_project_id, tripletex_project_name, tripletex_activity_id, tripletex_activity_name, jira_project_key, jira_project_name, jira_issue_key)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (project_id, sync_direction, tripletex_project_id, tripletex_project_name, tripletex_activity_id, tripletex_activity_name, tripletex_is_absence, jira_project_key, jira_project_name, jira_issue_key)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     mapping.projectId,
+    mapping.syncDirection ?? "both",
     mapping.tripletex?.projectId ?? null,
     mapping.tripletex?.projectName ?? null,
     mapping.tripletex?.activityId ?? null,
     mapping.tripletex?.activityName ?? null,
+    mapping.tripletex?.isAbsence ? 1 : 0,
     mapping.jira?.projectKey ?? null,
     mapping.jira?.projectName ?? null,
     mapping.jira?.issueKey ?? null,

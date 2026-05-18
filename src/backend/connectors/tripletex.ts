@@ -218,18 +218,27 @@ export class TripletexConnector implements IConnector {
     });
   }
 
+  async getAbsenceActivities(): Promise<ConnectorActivity[]> {
+    return this.withSession(async (session) => {
+      const data = await this.apiGet(session, `https://tripletex.no/v2/activity?isProjectActivity=false&count=1000&fields=id,displayName`);
+      return (data.values ?? [])
+        .filter((v: any) => v.displayName)
+        .map((v: any) => ({ id: String(v.id), name: v.displayName }))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name, "nb"));
+    });
+  }
+
   async getEntries(from: string, to: string): Promise<TimeEntry[]> {
     return this.withSession(async (session) => {
       const fields = "id,date,hours,project(id,displayName),activity(id,displayName),comment";
       const url = `https://tripletex.no/v2/timesheet/entry?dateFrom=${from}&dateTo=${to}&count=1000&fields=${encodeURIComponent(fields)}`;
       const data = await this.apiGet(session, url);
-      const rawDates = (data.values ?? []).map((v: any) => v?.date).filter(Boolean);
-      console.log(`[getEntries] raw dates: ${rawDates.join(", ")}`);
       return (data.values ?? []).filter((v: any) => v?.hours).map((v: any) => ({
         id: crypto.randomUUID(),
         date: v.date ?? "",
         hours: v.hours ?? 0,
-        projectId: v.project ? String(v.project.id) : "",
+        // For absence entries: project is null, use activityId as a synthetic projectId key
+        projectId: v.project ? String(v.project.id) : (v.activity ? `absence:${v.activity.id}` : ""),
         description: v.comment ?? undefined,
         externalIds: { tripletex: String(v.id) },
       }));

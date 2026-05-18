@@ -18,11 +18,13 @@ export interface Project {
 
 export interface ProjectMapping {
   projectId: string;
+  syncDirection?: "both" | "tripletex_only"; // default "both"
   tripletex?: {
-    projectId: number;
+    projectId: number | null;       // null for absence activities (no project)
     projectName: string;
     activityId: number;
     activityName: string;
+    isAbsence?: boolean;            // true for Ferie/Syk/Fravær etc.
   };
   jira?: {
     projectKey: string;
