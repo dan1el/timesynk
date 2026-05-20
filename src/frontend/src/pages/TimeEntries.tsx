@@ -36,6 +36,7 @@ export function TimeEntries() {
   const [week, setWeek] = useState(() => startOfWeek(new Date(), WEEK_OPTS));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const weekPickerRef = useRef<HTMLInputElement>(null);
+  const dragSrcId = useRef<string | null>(null);
   const qc = useQueryClient();
 
   const from = format(week, "yyyy-MM-dd");
@@ -57,6 +58,27 @@ export function TimeEntries() {
 
   const hasProjects = projects.length > 0;
   const days = eachDayOfInterval({ start: week, end: endOfWeek(week, WEEK_OPTS) });
+
+  // Row order — persisted to localStorage, merged with live project list
+  const [rowOrder, setRowOrder] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("row-order") ?? "[]"); } catch { return []; }
+  });
+
+  const sortedProjects = [
+    ...rowOrder.filter(id => projects.some(p => p.id === id)).map(id => projects.find(p => p.id === id)!),
+    ...projects.filter(p => !rowOrder.includes(p.id)),
+  ];
+
+  function moveRow(srcId: string, dstId: string) {
+    if (srcId === dstId) return;
+    const ids = sortedProjects.map(p => p.id);
+    const from = ids.indexOf(srcId);
+    const to = ids.indexOf(dstId);
+    ids.splice(from, 1);
+    ids.splice(to, 0, srcId);
+    setRowOrder(ids);
+    localStorage.setItem("row-order", JSON.stringify(ids));
+  }
 
   // Cell state map – initialised from server data, kept in sync
   const [cells, setCells] = useState<Map<CellKey, CellState>>(new Map());
@@ -139,6 +161,7 @@ export function TimeEntries() {
 
   function updateCell(date: string, projectId: string, patch: Partial<CellState>) {
     const key: CellKey = `${date}::${projectId}`;
+    if (patch.hours !== undefined) patch = { ...patch, hours: patch.hours.replace(",", ".") };
     setCells((prev) => {
       const existing = prev.get(key) ?? { hours: "", dirty: false };
       return new Map(prev).set(key, { ...existing, ...patch, dirty: true });
@@ -188,6 +211,12 @@ export function TimeEntries() {
             >
               Uke {format(week, "w")} – {format(week, "d. MMM", { locale: nb })} – {format(endOfWeek(week, WEEK_OPTS), "d. MMM yyyy", { locale: nb })}
             </span>
+            {(() => {
+              const wt = days.reduce((sum, d) => sum + dayTotal(format(d, "yyyy-MM-dd")), 0);
+              return wt > 0 ? (
+                <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 400, marginLeft: 4 }}>({fmtHours(wt)}t)</span>
+              ) : null;
+            })()}
             <input
               ref={weekPickerRef}
               type="week"
@@ -206,7 +235,7 @@ export function TimeEntries() {
           </> : <>
             <button onClick={() => setMonth(subMonths(month, 1))} style={btnStyle}>‹</button>
             <span style={{ fontWeight: 600, fontSize: 16, minWidth: 160, textAlign: "center", whiteSpace: "nowrap" }}>
-              {format(month, "MMMM yyyy", { locale: nb })}
+              {(() => { const s = format(month, "MMMM yyyy", { locale: nb }); return s.charAt(0).toUpperCase() + s.slice(1); })()}
             </span>
             <button onClick={() => setMonth(addMonths(month, 1))} style={btnStyle}>›</button>
             <button onClick={() => setMonth(startOfMonth(new Date()))} style={{ ...btnStyle, fontSize: 12, color: "var(--text-muted)" }}>I dag</button>
@@ -216,10 +245,10 @@ export function TimeEntries() {
         {/* Right: sync buttons */}
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => pullMutation.mutate()} disabled={pullMutation.isPending} style={{ ...btnStyle, background: "var(--btn-pull-bg)", color: "#fff", whiteSpace: "nowrap" }}>
-            {pullMutation.isPending ? "Henter…" : "⬇ Pull fra Tripletex"}
+            {pullMutation.isPending ? "Henter…" : "⬇ Hent fra Tripletex"}
           </button>
           <button onClick={openPushPreview} disabled={syncMutation.isPending} style={{ ...btnStyle, background: "var(--btn-push-bg)", color: "#fff", whiteSpace: "nowrap" }}>
-            {syncMutation.isPending ? "Syncing…" : "⇅ Push til Jira og Tripletex"}
+            {syncMutation.isPending ? "Synker…" : "⬆ Synk til Jira og Tripletex"}
           </button>
         </div>
       </div>
@@ -255,7 +284,7 @@ export function TimeEntries() {
                     <span style={{ color: "var(--text-muted)", whiteSpace: "nowrap", minWidth: 110 }}>
                       {format(new Date(r.date + "T12:00:00"), "EEE d. MMM", { locale: nb })}
                     </span>
-                    <span style={{ fontWeight: 600, minWidth: 36 }}>{r.hours}t</span>
+                    <span style={{ fontWeight: 600, minWidth: 36 }}>{fmtHours(r.hours)}t</span>
                     {r.error
                       ? <span style={{ color: "var(--red)" }}>❌ {r.error}</span>
                       : <>
@@ -311,14 +340,22 @@ export function TimeEntries() {
             </tr>
           </thead>
           <tbody>
-            {projects.map((project) => {
+            {sortedProjects.map((project) => {
               const rowTotal = days.reduce((sum, d) => {
                 const h = parseFloat(getCell(format(d, "yyyy-MM-dd"), project.id).hours);
                 return sum + (isNaN(h) ? 0 : h);
               }, 0);
               return (
-                <tr key={project.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                  <td style={{ padding: "6px 12px", fontWeight: 500, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={project.displayName}>
+                <tr
+                  key={project.id}
+                  draggable
+                  onDragStart={() => { dragSrcId.current = project.id; }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { if (dragSrcId.current) moveRow(dragSrcId.current, project.id); }}
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                >
+                  <td style={{ padding: "6px 12px", fontWeight: 500, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "grab" }} title={project.displayName}>
+                    <span style={{ marginRight: 6, color: "var(--text-disabled)", fontSize: 12, cursor: "grab" }}>⠿</span>
                     {project.displayName}
                   </td>
                   {days.map((d) => {
@@ -358,7 +395,7 @@ export function TimeEntries() {
                     );
                   })}
                   <td style={{ padding: "6px 12px", textAlign: "center", fontWeight: 600, color: rowTotal > 0 ? "var(--text-primary)" : "var(--text-disabled)" }}>
-                    {rowTotal > 0 ? rowTotal : "–"}
+                    {rowTotal > 0 ? `${fmtHours(rowTotal)}t` : "–"}
                   </td>
                 </tr>
               );
@@ -371,12 +408,12 @@ export function TimeEntries() {
                 const total = dayTotal(format(d, "yyyy-MM-dd"));
                 return (
                   <td key={d.toISOString()} style={{ textAlign: "center", padding: "8px 4px", fontWeight: 600, color: total > 0 ? "var(--text-primary)" : "var(--text-disabled)", background: isToday(d) ? "var(--bg-blue-tint)" : isRedDay(d) ? "var(--bg-red-tint)" : "transparent" }}>
-                    {total > 0 ? total : "–"}
+                    {total > 0 ? `${fmtHours(total)}t` : "–"}
                   </td>
                 );
               })}
               <td style={{ textAlign: "center", padding: "8px 12px", fontWeight: 700 }}>
-                {days.reduce((sum, d) => sum + dayTotal(format(d, "yyyy-MM-dd")), 0) || "–"}
+                {(() => { const t = days.reduce((sum, d) => sum + dayTotal(format(d, "yyyy-MM-dd")), 0); return t > 0 ? `${fmtHours(t)}t` : "–"; })()}
               </td>
             </tr>
           </tfoot>
@@ -386,7 +423,7 @@ export function TimeEntries() {
       {showPushPreview && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
           <div style={{ background: "var(--surface)", borderRadius: 12, padding: 28, width: 560, maxWidth: "95vw", maxHeight: "75vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflowX: "hidden" }}>
-            <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Bekreft push</h2>
+            <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Bekreft synk</h2>
             {previewLoading ? (
               <p style={{ color: "var(--text-muted)", flex: 1 }}>Henter endringer…</p>
             ) : previewUpserts.length === 0 && previewDeletes.length === 0 ? (
@@ -410,7 +447,7 @@ export function TimeEntries() {
                             <td style={{ padding: "6px 8px", whiteSpace: "nowrap", color: "var(--text-muted)" }}>
                               {format(new Date(item.date + "T12:00:00"), "EEE d. MMM", { locale: nb })}
                             </td>
-                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{item.hours}t</td>
+                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{fmtHours(item.hours)}t</td>
                             <td style={{ padding: "6px 8px" }}>{item.projectName}</td>
                             <td style={{ padding: "6px 8px", display: "flex", gap: 4 }}>
                               {connectors.map(c => <span key={c} style={actionBadge(item.action as "create" | "update")}>{c}</span>)}
@@ -434,7 +471,7 @@ export function TimeEntries() {
                             <td style={{ padding: "6px 8px", whiteSpace: "nowrap", color: "var(--text-muted)" }}>
                               {format(new Date(item.date + "T12:00:00"), "EEE d. MMM", { locale: nb })}
                             </td>
-                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{item.hours}t</td>
+                            <td style={{ padding: "6px 8px", fontWeight: 600 }}>{fmtHours(item.hours)}t</td>
                             <td style={{ padding: "6px 8px", color: "var(--text-secondary)" }}>{item.ref ?? "—"}</td>
                             <td style={{ padding: "6px 8px", display: "flex", gap: 4 }}>
                               {connectors.map(c => (
@@ -480,6 +517,8 @@ function actionBadge(action: "create" | "update"): React.CSSProperties {
 
 const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid var(--btn-border)", borderRadius: 6, background: "var(--btn-bg)", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
 const bannerStyle = (bg: string): React.CSSProperties => ({ padding: "8px 12px", background: bg, borderRadius: 6, marginBottom: 12, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between" });
+/** Format a number using Norwegian decimal comma */
+const fmtHours = (n: number) => String(n).replace(".", ",");
 function thStyle(align: "left" | "center"): React.CSSProperties {
   return { padding: "10px 12px", textAlign: align, background: "var(--bg-subtle)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: "var(--text-secondary)" };
 }

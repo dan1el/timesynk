@@ -18,7 +18,7 @@ export function Settings() {
   const [newName, setNewName] = useState("");
   const [showAdd, setShowAdd] = useState(false);
 
-  const { data: projects = [] } = useQuery<Project[]>({
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
     queryKey: ["projects"],
     queryFn: () => fetchJSON("/api/projects"),
   });
@@ -78,7 +78,18 @@ export function Settings() {
               </div>
             </div>
             <button onClick={() => setEditProject(p)} style={btnStyle}>Konfigurer</button>
-            <button onClick={() => deleteMutation.mutate(p.id)} style={{ ...btnStyle, color: "var(--red)", borderColor: "var(--red)" }}>Slett</button>
+            {deleteConfirmId === p.id ? (
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "var(--red)", whiteSpace: "nowrap" }}>Slette?</span>
+                <button
+                  onClick={() => { deleteMutation.mutate(p.id); setDeleteConfirmId(null); }}
+                  style={{ ...btnStyle, color: "#fff", background: "var(--red)", borderColor: "var(--red)", padding: "6px 10px" }}
+                >Ja</button>
+                <button onClick={() => setDeleteConfirmId(null)} style={{ ...btnStyle, padding: "6px 10px" }}>Nei</button>
+              </div>
+            ) : (
+              <button onClick={() => setDeleteConfirmId(p.id)} style={{ ...btnStyle, color: "var(--red)", borderColor: "var(--red)" }}>Slett</button>
+            )}
           </div>
         ))
       )}
@@ -193,7 +204,7 @@ function ProjectMappingModal({ project, onClose, onSaved }: { project: Project; 
             onClick={() => setSyncDirection("both")}
             style={{ flex: 1, padding: "8px", border: "none", fontSize: 13, cursor: "pointer", background: syncDirection === "both" ? "var(--accent)" : "var(--btn-bg)", color: syncDirection === "both" ? "var(--nav-text)" : "var(--text-secondary)" }}
           >
-            ⇅ Jira og Tripletex
+            ↔ Jira og Tripletex
           </button>
           <button
             type="button"

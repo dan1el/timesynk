@@ -21,7 +21,7 @@ const DAY_HEADERS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
 
 interface Project { id: string; displayName: string; }
 type CellKey = string; // `${date}::${projectId}`
-interface CellState { id?: string; hours: string; dirty: boolean; }
+interface CellState { id?: string; hours: string; syncedAt?: string; dirty: boolean; }
 
 function norwegianHolidays(year: number): Set<string> {
   const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -74,6 +74,14 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
     queryFn: () => fetchJSON(`${API}/api/projects`),
   });
 
+  const rowOrder: string[] = (() => {
+    try { return JSON.parse(localStorage.getItem("row-order") ?? "[]"); } catch { return []; }
+  })();
+  const sortedProjects = [
+    ...rowOrder.filter(id => projects.some(p => p.id === id)).map(id => projects.find(p => p.id === id)!),
+    ...projects.filter(p => !rowOrder.includes(p.id)),
+  ];
+
   // Sync entries into cells whenever expanded week or entries change
   useEffect(() => {
     if (!expandedWeek) return;
@@ -82,10 +90,10 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
     const next = new Map<CellKey, CellState>();
     for (const d of days) {
       const dateStr = format(d, "yyyy-MM-dd");
-      for (const p of projects) {
+      for (const p of sortedProjects) {
         const key = `${dateStr}::${p.id}`;
         const entry = entries.find(e => e.date === dateStr && e.projectId === p.id);
-        next.set(key, { id: entry?.id, hours: entry ? String(entry.hours) : "", dirty: false });
+        next.set(key, { id: entry?.id, hours: entry ? String(entry.hours) : "", syncedAt: entry?.syncedAt, dirty: false });
       }
     }
     setCells(next);
@@ -121,7 +129,7 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
 
   function updateCell(date: string, projectId: string, hours: string) {
     const key = `${date}::${projectId}`;
-    setCells(m => new Map(m).set(key, { ...m.get(key)!, hours, dirty: true }));
+    setCells(m => new Map(m).set(key, { ...m.get(key)!, hours: hours.replace(",", "."), dirty: true }));
   }
 
   function saveCell(date: string, projectId: string) {
@@ -136,6 +144,17 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
   const totals = new Map<string, number>();
   for (const e of entries) {
     totals.set(e.date, (totals.get(e.date) ?? 0) + e.hours);
+  }
+
+  // A date is "fully synced" if every entry that day has syncedAt
+  const syncedDates = new Set<string>();
+  const dateEntries = new Map<string, typeof entries>();
+  for (const e of entries) {
+    if (!dateEntries.has(e.date)) dateEntries.set(e.date, []);
+    dateEntries.get(e.date)!.push(e);
+  }
+  for (const [date, es] of dateEntries) {
+    if (es.length > 0 && es.every(e => e.syncedAt)) syncedDates.add(date);
   }
 
   const weeks = eachWeekOfInterval(
@@ -165,20 +184,14 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
 
   return (
     <div>
-      {monthTotal > 0 && (
-        <div style={{ marginBottom: 12, fontSize: 14, color: "var(--text-muted)" }}>
-          Totalt denne måneden: <strong>{monthTotal}t</strong>
-        </div>
-      )}
-
       <table ref={tableRef} style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <thead>
           <tr>
-            <th style={thStyle("left", false)}>Uke</th>
+            <th style={thStyle("left", "none")}>Uke</th>
             {DAY_HEADERS.map((d) => (
-              <th key={d} style={thStyle("center", d === "Lør" || d === "Søn")}>{d}</th>
+              <th key={d} style={thStyle("center", d === "Søn" ? "sun" : d === "Lør" ? "sat" : "none")}>{d}</th>
             ))}
-            <th style={thStyle("center", false)}>Sum</th>
+            <th style={thStyle("center", "none")}>Sum</th>
           </tr>
         </thead>
         <tbody>
@@ -205,7 +218,7 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                     onClick={() => toggleWeek(weekStartISO)}
                     style={{ padding: "10px 12px", fontWeight: 700, color: "var(--accent)", cursor: "pointer", fontSize: 14, whiteSpace: "nowrap" }}
                   >
-                    Uke {format(weekStart, "w", { locale: nb })} ▴
+                    {format(weekStart, "w", { locale: nb })} ▴
                     <span
                       onClick={e => { e.stopPropagation(); onWeekClick(weekStart); }}
                       title="Åpne i ukesvisning"
@@ -224,7 +237,7 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                   <td />
                 </tr>,
                 // Project rows
-                ...projects.map((project, pIdx) => {
+                ...sortedProjects.map((project, pIdx) => {
                   const rowTotal = days.reduce((s, d) => {
                     const v = parseFloat(cells.get(`${format(d, "yyyy-MM-dd")}::${project.id}`)?.hours ?? "");
                     return s + (isNaN(v) ? 0 : v);
@@ -242,42 +255,48 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                         const red = isRedDay(d);
                         const today = isToday(d);
                         const outside = !inMonth(d);
+                        const synced = cell.syncedAt && !cell.dirty;
                         const isFirst = pIdx === 0 && dIdx === 0;
-                        const isLast = pIdx === projects.length - 1 && dIdx === days.length - 1;
+                        const isLast = pIdx === sortedProjects.length - 1 && dIdx === days.length - 1;
                         return (
                           <td key={ds} style={{ padding: "4px 4px", textAlign: "center", background: today ? "var(--bg-blue-tint)" : red ? "var(--bg-red-tint)" : outside ? "var(--bg-muted)" : "transparent" }}>
                             {outside ? (
                               <span style={{ fontSize: 14, color: "var(--text-disabled)" }}>
-                                {cell.hours ? `${cell.hours}t` : "–"}
+                                {cell.hours ? `${fmtHours(parseFloat(cell.hours))}t` : "–"}
                               </span>
                             ) : (
-                            <input
-                              type="number" min="0" max="24" step="0.5"
-                              placeholder=""
-                              value={cell.hours}
-                              onChange={e => updateCell(ds, project.id, e.target.value)}
-                              onBlur={() => saveCell(ds, project.id)}
-                              onKeyDown={e => {
-                                if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); return; }
-                                if (e.key === "Tab" && !e.shiftKey && isLast && weekIdx < weeks.length - 1) {
-                                  e.preventDefault();
-                                  saveCell(ds, project.id);
-                                  expandWeekAndFocus(format(weeks[weekIdx + 1], "yyyy-MM-dd"), "first");
-                                }
-                                if (e.key === "Tab" && e.shiftKey && isFirst && weekIdx > 0) {
-                                  e.preventDefault();
-                                  saveCell(ds, project.id);
-                                  expandWeekAndFocus(format(weeks[weekIdx - 1], "yyyy-MM-dd"), "last");
-                                }
-                              }}
-                              style={{ width: "100%", padding: "7px 4px", border: `1px solid ${cell.dirty ? "var(--amber)" : "var(--input-border)"}`, borderRadius: 6, fontSize: 14, textAlign: "center", background: "var(--input-bg)", outline: "none", color: "var(--text-primary)", boxSizing: "border-box" }}
-                            />
+                            <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+                              <input
+                                type="number" min="0" max="24" step="0.5"
+                                placeholder=""
+                                value={cell.hours}
+                                onChange={e => updateCell(ds, project.id, e.target.value)}
+                                onBlur={() => saveCell(ds, project.id)}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); return; }
+                                  if (e.key === "Tab" && !e.shiftKey && isLast && weekIdx < weeks.length - 1) {
+                                    e.preventDefault();
+                                    saveCell(ds, project.id);
+                                    expandWeekAndFocus(format(weeks[weekIdx + 1], "yyyy-MM-dd"), "first");
+                                  }
+                                  if (e.key === "Tab" && e.shiftKey && isFirst && weekIdx > 0) {
+                                    e.preventDefault();
+                                    saveCell(ds, project.id);
+                                    expandWeekAndFocus(format(weeks[weekIdx - 1], "yyyy-MM-dd"), "last");
+                                  }
+                                }}
+                                style={{ width: "100%", padding: "7px 4px", border: `1px solid ${cell.dirty ? "var(--amber)" : synced ? "var(--border-synced)" : "var(--input-border)"}`, borderRadius: 6, fontSize: 14, textAlign: "center", background: synced ? "var(--bg-synced)" : "var(--input-bg)", outline: "none", color: "var(--text-primary)", boxSizing: "border-box" }}
+                              />
+                              {synced && (
+                                <span style={{ position: "absolute", top: -4, right: -4, fontSize: 9, color: "var(--green)" }}>✓</span>
+                              )}
+                            </div>
                             )}
                           </td>
                         );
                       })}
                       <td style={{ padding: "6px 12px", textAlign: "center", fontSize: 14, color: rowTotal > 0 ? "var(--text-secondary)" : "var(--text-disabled)", fontWeight: 600 }}>
-                        {rowTotal > 0 ? `${rowTotal}t` : "–"}
+                        {rowTotal > 0 ? `${fmtHours(rowTotal)}t` : "–"}
                       </td>
                     </tr>
                   );
@@ -287,18 +306,22 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                   <td style={{ padding: "8px 12px", fontSize: 14, color: "var(--text-muted)", fontWeight: 600 }}>Sum</td>
                   {weekDayTotals.map((t, i) => (
                     <td key={i} style={{ padding: "8px 4px", textAlign: "center", fontSize: 14, fontWeight: 600, color: t > 0 ? "var(--accent-dark)" : "var(--text-disabled)" }}>
-                      {t > 0 ? `${t}t` : "–"}
+                      {t > 0 ? `${fmtHours(t)}t` : "–"}
                     </td>
                   ))}
                   <td style={{ padding: "8px 12px", textAlign: "center", fontSize: 14, fontWeight: 700, color: weekTotal > 0 ? "var(--accent-dark)" : "var(--text-disabled)" }}>
-                    {weekTotal > 0 ? `${weekTotal}t` : "–"}
+                    {weekTotal > 0 ? `${fmtHours(weekTotal)}t` : "–"}
                   </td>
                 </tr>,
               ];
             }
 
             // Collapsed: summary row
+            const weekDays = days.filter(d => inMonth(d) && d.getDay() !== 0 && d.getDay() !== 6 && !isRedDay(d));
+            const expectedHours = weekDays.length * 7.5;
             const weekSum = days.filter(inMonth).reduce((s, d) => s + (totals.get(format(d, "yyyy-MM-dd")) ?? 0), 0);
+            const isPast = endOfWeek(weekStart, WEEK_OPTS) < new Date();
+            const isLow = isPast && expectedHours > 0 && weekSum < expectedHours;
 
             return (
               <tr key={weekStartISO} style={{ borderBottom: "1px solid var(--border)" }}>
@@ -306,42 +329,56 @@ export function MonthView({ month, setMonth, onWeekClick }: Props) {
                   onClick={() => toggleWeek(weekStartISO)}
                   style={{ padding: "10px 12px", fontWeight: 600, color: "var(--accent)", cursor: "pointer", whiteSpace: "nowrap", fontSize: 14 }}
                 >
-                  Uke {format(weekStart, "w", { locale: nb })}
+                  {format(weekStart, "w", { locale: nb })}
                 </td>
                 {days.map((d) => {
                   const ds = format(d, "yyyy-MM-dd");
                   const hours = totals.get(ds);
                   const outside = !inMonth(d);
+                  const sat = d.getDay() === 6;
                   const red = isRedDay(d);
                   const today = isToday(d);
-                  const bg = today ? "var(--bg-blue-tint)" : red ? "var(--bg-red-tint)" : outside ? "var(--bg-muted)" : "transparent";
-                  const color = outside ? "var(--text-disabled)" : today ? "var(--text-primary)" : red ? "var(--red)" : hours ? "var(--text-primary)" : "var(--text-placeholder)";
+                  const bg = today ? "var(--bg-blue-tint)" : red ? "var(--bg-red-tint)" : sat ? "var(--bg-muted)" : outside ? "var(--bg-muted)" : "transparent";
+                  const synced = !outside && !!hours && syncedDates.has(ds);
+                  const color = outside ? "var(--text-disabled)" : today ? "var(--text-primary)" : red ? "var(--red)" : sat ? "var(--text-muted)" : synced ? "var(--text-success)" : hours ? "var(--text-primary)" : "var(--text-placeholder)";
                   return (
                     <td
                       key={ds}
                       onClick={() => toggleWeek(weekStartISO)}
                       style={{ padding: "10px 8px", textAlign: "center", background: bg, color, fontWeight: hours && !outside ? 600 : 400, cursor: "pointer" }}
                     >
-                      <div style={{ fontSize: 11, color: outside ? "var(--text-faint)" : today ? "var(--text-secondary)" : red ? "var(--red-light)" : "var(--text-placeholder)", marginBottom: 2 }}>
+                      <div style={{ fontSize: 11, color: outside ? "var(--text-faint)" : today ? "var(--text-secondary)" : red ? "var(--red-light)" : sat ? "var(--text-muted)" : "var(--text-placeholder)", marginBottom: 2 }}>
                         {format(d, "d")}
                       </div>
-                      {outside ? "" : hours ? `${hours}t` : <span style={{ color: "var(--text-faint)" }}>·</span>}
+                      {outside ? "" : hours ? <span>{fmtHours(hours)}t{synced && <span style={{ marginLeft: 2, fontSize: 9, color: "var(--green)" }}>✓</span>}</span> : <span style={{ color: "var(--text-faint)" }}>·</span>}
                     </td>
                   );
                 })}
-                <td style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: weekSum > 0 ? "var(--text-primary)" : "var(--text-disabled)" }}>
-                  {weekSum > 0 ? `${weekSum}t` : "–"}
+                <td style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: isLow ? "var(--amber)" : weekSum > 0 ? "var(--text-primary)" : "var(--text-disabled)" }}>
+                  {weekSum > 0 ? `${fmtHours(weekSum)}t` : "–"}
+                  {isLow && <span title={`Forventet ~${expectedHours}t`} style={{ marginLeft: 4, fontSize: 12 }}>⚠</span>}
                 </td>
               </tr>
             );
           })}
         </tbody>
+        {monthTotal > 0 && (
+          <tfoot>
+            <tr style={{ borderTop: "2px solid var(--border)", background: "var(--bg-subtle)" }}>
+              <td colSpan={8} style={{ padding: "8px 12px", fontSize: 14, color: "var(--text-secondary)", fontWeight: 600 }}>Sum</td>
+              <td style={{ padding: "8px 8px", textAlign: "center", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{fmtHours(monthTotal)}t</td>
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );
 }
 
 const btnStyle: React.CSSProperties = { height: 34, padding: "0 14px", border: "1px solid var(--btn-border)", borderRadius: 6, background: "var(--btn-bg)", fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", boxSizing: "border-box" };
-function thStyle(align: "left" | "center", red: boolean): React.CSSProperties {
-  return { padding: "10px 12px", textAlign: align, background: red ? "var(--bg-red-tint)" : "var(--bg-subtle)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: red ? "var(--red)" : "var(--text-secondary)" };
+const fmtHours = (n: number) => String(n).replace(".", ",");
+function thStyle(align: "left" | "center", weekend: "none" | "sat" | "sun"): React.CSSProperties {
+  if (weekend === "sun") return { padding: "10px 12px", textAlign: align, background: "var(--bg-red-tint)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: "var(--red)" };
+  if (weekend === "sat") return { padding: "10px 12px", textAlign: align, background: "var(--bg-muted)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: "var(--text-muted)" };
+  return { padding: "10px 12px", textAlign: align, background: "var(--bg-subtle)", borderBottom: "2px solid var(--border)", fontWeight: 600, color: "var(--text-secondary)" };
 }
