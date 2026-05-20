@@ -19,6 +19,8 @@ export function Settings() {
   const [showAdd, setShowAdd] = useState(false);
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["projects"],
     queryFn: () => fetchJSON("/api/projects"),
   });
