@@ -41,7 +41,10 @@ export function TimeEntries() {
 
   const from = format(week, "yyyy-MM-dd");
   const to = format(endOfWeek(week, WEEK_OPTS), "yyyy-MM-dd");
-  const pullMonths = [...new Set([from.substring(0, 7), to.substring(0, 7)])];
+  // Pull scope depends on active view
+  const pullMonths = view === "month"
+    ? [format(month, "yyyy-MM")]
+    : [...new Set([from.substring(0, 7), to.substring(0, 7)])];
   // Sync scope: full months covering the viewed week
   const syncFrom = from.substring(0, 7) + "-01";
   const syncTo = format(endOfMonth(parseISO(to.substring(0, 7) + "-01")), "yyyy-MM-dd");
