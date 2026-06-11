@@ -217,8 +217,6 @@ app.get("/api/sync/preview", async (req, res) => {
         unlinkedJiraByKey.set(key, { entry, name: projectMap.get(entry.projectId) ?? entry.projectId });
       }
     }
-    console.log("[preview] unlinkedJiraByKey keys:", [...unlinkedJiraByKey.keys()]);
-    console.log("[preview] jiraIssueKeys:", [...jiraIssueKeys]);
 
     const claimedEntryIds = new Set<string>();
 
@@ -272,7 +270,7 @@ app.get("/api/sync/preview", async (req, res) => {
         const remoteEntries = await tripletex.getEntries(from, ttxToExclusive(to));
         const remoteTtxIds = new Set(remoteEntries.map(e => e.externalIds.tripletex).filter(Boolean) as string[]);
 
-        // Local entries with Tripletex ID that no longer exists remotely → re-create
+        // Local entries with Tripletex ID that no longer exists remotely → re-create (only when fetch succeeded)
         for (const entry of localEntries) {
           if (!entry.externalIds.tripletex) continue;
           if (!remoteTtxIds.has(entry.externalIds.tripletex)) {
@@ -370,7 +368,14 @@ app.post("/api/sync/push", async (req, res) => {
     const updatedEntries = db.getTimeEntries(from, to);
 
     // Fetch remote Tripletex entries once to detect stale IDs and orphans
-    const remoteTtxEntries = await tripletex.getEntries(from, ttxToExclusive(to)).catch(() => [] as typeof updatedEntries);
+    let remoteTtxEntries: typeof updatedEntries = [];
+    let remoteTtxFetchOk = false;
+    try {
+      remoteTtxEntries = await tripletex.getEntries(from, ttxToExclusive(to));
+      remoteTtxFetchOk = true;
+    } catch (err: any) {
+      console.warn(`[push] tripletex.getEntries failed, skipping stale-ID re-create:`, err?.message ?? err);
+    }
     const remoteTtxIds = new Set(remoteTtxEntries.map(e => e.externalIds.tripletex).filter(Boolean) as string[]);
 
     // 1. Upsert local entries to connectors (create missing, re-create stale, update unconfirmed)
@@ -380,12 +385,14 @@ app.post("/api/sync/push", async (req, res) => {
       const result: any = { id: entry.id, date: entry.date, hours: entry.hours, tripletex: null, jira: null, error: null };
       try {
         if (mapping.tripletex) {
-          if (!entry.externalIds.tripletex || !remoteTtxIds.has(entry.externalIds.tripletex)) {
-            // No ID, or ID exists locally but was deleted remotely → re-create
+          const hasTtxId = !!entry.externalIds.tripletex;
+          const isStale = hasTtxId && remoteTtxFetchOk && !remoteTtxIds.has(entry.externalIds.tripletex!);
+          if (!hasTtxId || isStale) {
+            // No ID, or confirmed stale (remote fetch succeeded but ID gone) → create
             result.tripletex = await tripletex.pushEntry(entry, mapping);
-          } else if (!entry.syncedAt) {
+          } else if (hasTtxId && !entry.syncedAt && remoteTtxFetchOk) {
             // Pulled/claimed entry: ensure Tripletex has current hours
-            await tripletex.updateEntry(entry.externalIds.tripletex, entry, mapping);
+            await tripletex.updateEntry(entry.externalIds.tripletex!, entry, mapping);
             result.tripletex = entry.externalIds.tripletex;
           }
         }
@@ -480,13 +487,22 @@ app.post("/api/sync/pull", async (req, res) => {
       }
 
       const tripletexId = entry.externalIds.tripletex!;
-      const existing = db.getTimeEntryByTripletexId(tripletexId);
-      if (!existing) {
+      const existingById = db.getTimeEntryByTripletexId(tripletexId);
+      if (existingById) {
+        console.log(`[pull] already exists ${entry.date} ${entry.hours}t ttxId=${tripletexId}`);
+        continue;
+      }
+
+      // Claim matching: link to an existing local entry with same date+project+hours but no Tripletex ID
+      const claimMatch = db.getUnlinkedTripletexMatch(entry.date, localProjectId, entry.hours);
+      if (claimMatch) {
+        db.upsertTimeEntry({ ...claimMatch, externalIds: { ...claimMatch.externalIds, tripletex: tripletexId } });
+        console.log(`[pull] claimed ${entry.date} ${entry.hours}t ttxId=${tripletexId} → existing entry ${claimMatch.id}`);
+        pulled++;
+      } else {
         db.upsertTimeEntry({ ...entry, projectId: localProjectId });
         console.log(`[pull] imported ${entry.date} ${entry.hours}t projectId=${localProjectId} ttxId=${tripletexId}`);
         pulled++;
-      } else {
-        console.log(`[pull] already exists ${entry.date} ${entry.hours}t ttxId=${tripletexId}`);
       }
     }
 

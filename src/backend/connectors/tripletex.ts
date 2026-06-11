@@ -90,34 +90,50 @@ async function resolveEmployeeId(session: Session): Promise<string> {
     "x-tlx-csrf-token": session.csrfToken,
     "x-tlx-context-id": session.contextId,
   };
-  // Try several endpoints until we get an integer employee ID
-  const attempts = [
-    "https://tripletex.no/v2/employee/~me?fields=id",
-    "https://tripletex.no/v2/token/employee?fields=id",
-  ];
-  for (const url of attempts) {
-    try {
-      const res = await fetch(url, { headers });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const id = data.value?.id ?? data.value?.employee?.id;
-      if (id) return String(id);
-    } catch { /* try next */ }
-  }
-  // Last resort: grab from first timesheet entry
+  // 1. Most authoritative: grab employee id from the user's OWN timesheet entries.
+  // You can only own entries that match your employee id, so this is the only value
+  // Tripletex will accept on POST/PUT. (whoAmI can return the API token's employee,
+  // which may differ from the timesheet owner and causes 422 "Oppdatering ikke tillatt".)
   try {
-    const today = new Date().toISOString().split("T")[0]!;
-    const from = today.substring(0, 7) + "-01";
-    const res = await fetch(
-      `https://tripletex.no/v2/timesheet/entry?dateFrom=${from}&dateTo=${today}&count=1&fields=employee(id)`,
-      { headers }
-    );
-    if (res.ok) {
+    const today = new Date();
+    for (let m = 0; m < 12; m++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - m, 1);
+      const from = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      const to = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${lastDay}`;
+      const res = await fetch(
+        `https://tripletex.no/v2/timesheet/entry?dateFrom=${from}&dateTo=${to}&count=1&fields=employee(id)`,
+        { headers }
+      );
       const data = await res.json();
-      const id = data.values?.[0]?.employee?.id;
+      if (res.ok) {
+        const id = data.values?.[0]?.employee?.id;
+        if (id) return String(id);
+      }
+    }
+  } catch (e) { console.warn(`[resolveEmployeeId] timesheet fallback threw:`, e); }
+  // 2. "Current session" endpoint as a fallback when there are no entries yet.
+  // Tripletex uses a ">" action prefix; plain /whoAmI returns 405.
+  try {
+    const url = "https://tripletex.no/v2/token/session/%3EwhoAmI?fields=employeeId,employee(id)";
+    const res = await fetch(url, { headers });
+    const data = await res.json();
+    if (res.ok) {
+      const id = data.value?.employee?.id ?? data.value?.employeeId;
       if (id) return String(id);
     }
-  } catch { /* give up */ }
+  } catch (e) { console.warn(`[resolveEmployeeId] >whoAmI threw:`, e); }
+  // 3. Last resort: company employee list — ONLY safe when there is exactly one
+  // employee. With multiple employees this returns the first one (not necessarily
+  // the logged-in user), which causes push to fail with "Oppdatering ikke tillatt".
+  try {
+    const res = await fetch("https://tripletex.no/v2/employee?count=1&fields=id", { headers });
+    const data = await res.json();
+    if (res.ok && data.fullResultSize === 1) {
+      const id = data.values?.[0]?.id;
+      if (id) return String(id);
+    }
+  } catch (e) { console.warn(`[resolveEmployeeId] /v2/employee threw:`, e); }
   throw new Error("Could not resolve Tripletex employee ID");
 }
 
@@ -180,7 +196,10 @@ export class TripletexConnector implements IConnector {
       body: JSON.stringify(body),
     });
     const text = await res.text();
-    if (res.status < 200 || res.status >= 300) throw new Error(`Tripletex POST error ${res.status}: ${text.substring(0, 200)}`);
+    if (res.status < 200 || res.status >= 300) {
+      console.error(`[Tripletex] POST ${url} → ${res.status}:`, text);
+      throw new Error(`Tripletex POST error ${res.status}: ${text}`);
+    }
     return JSON.parse(text);
   }
 
@@ -191,7 +210,10 @@ export class TripletexConnector implements IConnector {
       body: JSON.stringify(body),
     });
     const text = await res.text();
-    if (res.status < 200 || res.status >= 300) throw new Error(`Tripletex PUT error ${res.status}: ${text.substring(0, 200)}`);
+    if (res.status < 200 || res.status >= 300) {
+      console.error(`[Tripletex] PUT ${url} → ${res.status}:`, text);
+      throw new Error(`Tripletex PUT error ${res.status}: ${text}`);
+    }
     return JSON.parse(text);
   }
 
@@ -248,14 +270,19 @@ export class TripletexConnector implements IConnector {
   async pushEntry(entry: TimeEntry, mapping: ProjectMapping): Promise<string> {
     return this.withSession(async (session) => {
       if (!mapping.tripletex) throw new Error("No Tripletex mapping for project");
-      const data = await this.apiPost(session, "https://tripletex.no/v2/timesheet/entry", {
+      const employeeId = Number(session.employeeId);
+      if (!employeeId) throw new Error(`Employee ID not resolved (got: "${session.employeeId}")`);
+      const body: any = {
         date: entry.date,
         hours: entry.hours,
         comment: entry.description ?? "",
-        project: { id: mapping.tripletex.projectId },
         activity: { id: mapping.tripletex.activityId },
-        employee: { id: Number(session.employeeId) },
-      });
+        employee: { id: employeeId },
+      };
+      if (!mapping.tripletex.isAbsence && mapping.tripletex.projectId) {
+        body.project = { id: mapping.tripletex.projectId };
+      }
+      const data = await this.apiPost(session, "https://tripletex.no/v2/timesheet/entry", body);
       return String(data.value?.id ?? "");
     });
   }
@@ -263,14 +290,19 @@ export class TripletexConnector implements IConnector {
   async updateEntry(externalId: string, entry: TimeEntry, mapping: ProjectMapping): Promise<void> {
     await this.withSession(async (session) => {
       if (!mapping.tripletex) throw new Error("No Tripletex mapping for project");
-      await this.apiPut(session, `https://tripletex.no/v2/timesheet/entry/${externalId}`, {
+      const employeeId = Number(session.employeeId);
+      if (!employeeId) throw new Error(`Employee ID not resolved (got: "${session.employeeId}")`);
+      const body: any = {
         date: entry.date,
         hours: entry.hours,
         comment: entry.description ?? "",
-        project: { id: mapping.tripletex.projectId },
         activity: { id: mapping.tripletex.activityId },
-        employee: { id: Number(session.employeeId) },
-      });
+        employee: { id: employeeId },
+      };
+      if (!mapping.tripletex.isAbsence && mapping.tripletex.projectId) {
+        body.project = { id: mapping.tripletex.projectId };
+      }
+      await this.apiPut(session, `https://tripletex.no/v2/timesheet/entry/${externalId}`, body);
     });
   }
 

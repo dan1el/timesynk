@@ -145,6 +145,14 @@ export function getTimeEntryByTripletexId(tripletexId: string): TimeEntry | unde
   return row ? rowToEntry(row) : undefined;
 }
 
+/** Find a local entry matching date+projectId+hours that has no Tripletex ID yet (for claim matching) */
+export function getUnlinkedTripletexMatch(date: string, projectId: string, hours: number): TimeEntry | undefined {
+  const row = db.prepare(
+    "SELECT * FROM time_entries WHERE date = ? AND project_id = ? AND hours = ? AND (external_tripletex_id IS NULL OR external_tripletex_id = '') LIMIT 1"
+  ).get(date, projectId, hours) as any;
+  return row ? rowToEntry(row) : undefined;
+}
+
 /** Returns all distinct Jira issue keys ever stored in external_jira_id (format "ISSUE:id") */
 export function getAllKnownJiraIssueKeys(): Set<string> {
   const rows = db.prepare(
